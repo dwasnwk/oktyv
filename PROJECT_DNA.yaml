@@ -1,0 +1,188 @@
+# Oktyv Project DNA
+# Version: 0.1.0-alpha.1
+# Created: 2026-01-22
+# Philosophy: Option B Perfection - Do It Right First Time
+
+identity:
+  name: "Oktyv"
+  tagline: "Browser automation MCP server for career platform integration"
+  purpose: |
+    Connects Career System to external job platforms through browser automation.
+    Enables seamless data extraction from LinkedIn, Indeed, Wellfound via MCP.
+  philosophy: |
+    Foundation Out - Build backend infrastructure before surface features.
+    Zero Technical Debt - No mocks, stubs, or temporary solutions.
+    Cognitive Monopoly - Context and intelligence as competitive advantage.
+    Lean Infrastructure - Use existing tools, build only what's unique.
+
+current_state:
+  version: "0.1.0-alpha.1"
+  phase: "Foundation"
+  phase_description: "Core architecture, TypeScript setup, documentation structure"
+  health:
+    build: "Not yet configured"
+    tests: "Not yet written"
+    docs: "In progress"
+  loc:
+    total: 0
+    src: 0
+    tests: 0
+    docs: ~500  # README + ARCHITECTURE
+  
+architecture:
+  type: "Standalone MCP Server"
+  runtime: "Node.js 18+"
+  language: "TypeScript 5.x (strict mode)"
+  primary_dependencies:
+    - "@modelcontextprotocol/sdk ^1.0.4"
+    - "puppeteer ^23.10.4"
+    - "winston ^3.17.0"
+    - "zod ^3.24.1"
+  deployment: "Local stdio (Claude Desktop config)"
+  
+boundaries:
+  does:
+    - "Browser automation via Puppeteer"
+    - "LinkedIn job search and extraction"
+    - "Indeed job search (future)"
+    - "Session persistence (stays logged in)"
+    - "Rate limiting per platform"
+    - "Canonical job data schema"
+  does_not:
+    - "Store user credentials"
+    - "Manage job applications"
+    - "Track application status"
+    - "Provide AI analysis"
+    - "Replace Career System"
+    - "Bundle as KERNL plugin"
+
+interfaces:
+  - workspace: "Career System"
+    relationship: "Data provider"
+    connection: "MCP protocol via Claude Desktop"
+    data_flow: "Oktyv → Claude → Career System"
+    
+  - workspace: "KERNL"
+    relationship: "Development tooling"
+    connection: "Session management, file operations"
+    data_flow: "KERNL manages Oktyv development"
+
+key_decisions:
+  - date: "2026-01-22"
+    decision: "Standalone MCP server, not KERNL plugin"
+    rationale: |
+      - Single responsibility (browser automation only)
+      - Easier to test in isolation
+      - Large Puppeteer dependencies (~300MB)
+      - Usable beyond Career System
+      - Simpler deployment and versioning
+      
+  - date: "2026-01-22"
+    decision: "Puppeteer over Playwright"
+    rationale: |
+      - Simpler API for MCP use case
+      - Smaller footprint
+      - Better Node.js integration
+      - Sufficient for LinkedIn/Indeed
+      - Can migrate if multi-browser needed
+      
+  - date: "2026-01-22"
+    decision: "Cookie-based session persistence"
+    rationale: |
+      - User stays logged in across invocations
+      - No credential management needed
+      - Mirrors real browser behavior
+      - Respects platform security
+      
+  - date: "2026-01-22"
+    decision: "Platform-agnostic canonical data schema"
+    rationale: |
+      - Career System independent of LinkedIn specifics
+      - Easy to add new platforms
+      - Consistent Claude experience
+      - Future-proof design
+
+naming:
+  etymology: |
+    "Oktyv" combines "oct" (eight, suggesting completeness) with modern tech aesthetic.
+    Represents eight-fold path: discover, filter, extract, analyze, apply, track, follow-up, succeed.
+  alternatives_rejected:
+    - "Fetch" (unicorn company $2.5B conflict)
+    - "Invoke" (multiple established companies)
+    - "Argus" (major real estate software $143M raised)
+    - "Sidecar" (extremely crowded namespace)
+    - "Octave" (major Hexagon spinoff 2026)
+  availability: "Clean - zero conflicts found"
+
+performance_targets:
+  tool_latency: "<500ms (excluding browser render)"
+  linkedin_search: "<3s for 10 results"
+  job_detail_fetch: "<2s per job"
+  memory_usage: "<500MB per browser instance"
+  concurrent_sessions: "1-3 browsers"
+
+milestones:
+  foundation:
+    status: "IN_PROGRESS"
+    started: "2026-01-22"
+    deliverables:
+      - "✅ Git repository initialized"
+      - "✅ Project registered with KERNL"
+      - "✅ README.md created"
+      - "✅ ARCHITECTURE.md created"
+      - "✅ package.json configured"
+      - "✅ tsconfig.json configured"
+      - "⏳ Source directory structure"
+      - "⏳ Type definitions"
+      - "⏳ MCP server skeleton"
+      - "⏳ Initial git commit"
+      
+  mvp_linkedin:
+    status: "PLANNED"
+    deliverables:
+      - "Browser session manager"
+      - "LinkedIn connector base"
+      - "linkedin_search_jobs tool"
+      - "linkedin_get_job tool"
+      - "Rate limiter implementation"
+      - "Error handling system"
+      - "Unit tests"
+      - "Integration tests"
+      
+  production_ready:
+    status: "PLANNED"
+    deliverables:
+      - "linkedin_get_company tool"
+      - "Indeed connector"
+      - "Comprehensive documentation"
+      - "Claude Desktop integration guide"
+      - "Performance optimization"
+      - "v1.0.0 release"
+
+future_phases:
+  phase_2:
+    name: "Platform Expansion"
+    platforms: ["Wellfound", "Vangst", "Dice", "Remote.co"]
+    
+  phase_3:
+    name: "Advanced Features"
+    features:
+      - "Application submission automation"
+      - "Resume tailoring integration"
+      - "Interview scheduling detection"
+      - "Application status tracking"
+      
+  phase_4:
+    name: "Scale Optimizations"
+    features:
+      - "Browser pool management"
+      - "Redis-based session sharing"
+      - "Distributed rate limiting"
+      - "Horizontal scaling support"
+
+meta:
+  created: "2026-01-22T08:11:44Z"
+  last_updated: "2026-01-22T08:11:44Z"
+  author: "David Kirsch"
+  workspace_id: "oktyv"
+  workspace_group: "standalone"
