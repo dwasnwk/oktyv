@@ -139,7 +139,7 @@ export class OktyvServer {
     });
   }
 
-  private async handleLinkedInSearchJobs(args: any): Promise<any> {
+  private async handleLinkedInSearchJobs(_args: any): Promise<any> {
     // TODO: Implement LinkedIn job search
     logger.warn('linkedin_search_jobs not yet implemented');
     
@@ -160,7 +160,7 @@ export class OktyvServer {
     };
   }
 
-  private async handleLinkedInGetJob(args: any): Promise<any> {
+  private async handleLinkedInGetJob(_args: any): Promise<any> {
     // TODO: Implement LinkedIn job fetch
     logger.warn('linkedin_get_job not yet implemented');
     
@@ -181,7 +181,7 @@ export class OktyvServer {
     };
   }
 
-  private async handleLinkedInGetCompany(args: any): Promise<any> {
+  private async handleLinkedInGetCompany(_args: any): Promise<any> {
     // TODO: Implement LinkedIn company fetch
     logger.warn('linkedin_get_company not yet implemented');
     

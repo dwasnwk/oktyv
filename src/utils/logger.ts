@@ -23,7 +23,7 @@ const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, label, metadata }) => {
     const labelStr = label ? `[${label}]` : '';
-    const metaStr = Object.keys(metadata).length > 0 
+    const metaStr = metadata && typeof metadata === 'object' && Object.keys(metadata).length > 0 
       ? `\n${JSON.stringify(metadata, null, 2)}` 
       : '';
     return `${timestamp} ${level} ${labelStr} ${message}${metaStr}`;

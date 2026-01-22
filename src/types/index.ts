@@ -10,3 +10,6 @@ export * from './company.js';
 
 // MCP types
 export * from './mcp.js';
+
+// Browser types (re-export from browser module)
+export type { BrowserSession, Platform, SessionState } from '../browser/types.js';

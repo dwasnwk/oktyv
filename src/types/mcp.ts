@@ -4,7 +4,7 @@
  */
 
 import type { Job, JobSearchParams, JobSearchResult } from './job.js';
-import type { Company, CompanySearchParams } from './company.js';
+import type { Company } from './company.js';
 
 /**
  * Error types that can be returned by Oktyv tools
@@ -51,6 +51,7 @@ export enum OktyvErrorCode {
   // Generic
   UNKNOWN_ERROR = 'UNKNOWN_ERROR',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
+  NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
 }
 
 export interface OktyvError {
