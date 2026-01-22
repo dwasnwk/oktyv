@@ -1,18 +1,21 @@
 # Oktyv
 
-**Browser automation MCP server for career platform integration**
+**Complete, production-grade authoritative agent browser automation system**
 
-Oktyv connects your Career System to external job platforms through browser automation, enabling seamless data extraction from LinkedIn, Indeed, Wellfound, and other career sites.
+Oktyv is an MCP server that provides autonomous browser automation for intelligent web interaction and complex web tasks. Built on Option B Perfection principles - this is the complete product, not an MVP.
 
 ## What is Oktyv?
 
-Oktyv is an MCP (Model Context Protocol) server that gives Claude the ability to control a web browser via Puppeteer/Playwright. This allows Claude to:
+Oktyv is an MCP (Model Context Protocol) server that gives Claude authoritative control over web browsers via Puppeteer. This enables Claude to autonomously:
 
-- Search for jobs on LinkedIn with complex filters
-- Extract detailed job descriptions, company information, and application links
-- Navigate authenticated sessions (you stay logged in)
-- Handle dynamic content (infinite scroll, modals, dropdowns)
-- Return clean, structured JSON data
+- Navigate complex web applications with intelligent decision-making
+- Extract structured data from dynamic content (infinite scroll, modals, SPAs)
+- Manage authenticated sessions across platforms (persistent login state)
+- Execute multi-step workflows with error recovery
+- Handle rate limiting and anti-bot measures gracefully
+- Return clean, structured JSON from any web source
+
+The first complete implementation is LinkedIn integration, demonstrating the full capabilities of the system for job search, company research, and professional networking automation.
 
 ## Why "Oktyv"?
 
@@ -24,26 +27,26 @@ The name combines "oct" (eight, suggesting completeness and thoroughness) with a
 ┌─────────────────────────────────────────────────┐
 │              Claude Desktop                      │
 │                                                  │
-│  Career System protocols + Claude AI            │
+│  Any MCP client + Claude AI                     │
 └────────────┬────────────────────────────────────┘
              │ MCP Protocol
              ↓
 ┌─────────────────────────────────────────────────┐
 │          Oktyv MCP Server                        │
 │                                                  │
-│  • linkedin_search_jobs()                        │
-│  • linkedin_get_job()                            │
-│  • linkedin_get_company()                        │
-│  • indeed_search_jobs()                          │
-│  • [future: wellfound, vangst, etc.]            │
+│  Platform Connectors:                            │
+│  • LinkedIn (search, jobs, companies)            │
+│  • Indeed (planned)                              │
+│  • Wellfound (planned)                           │
+│  • Generic Web (extensible framework)            │
 └────────────┬────────────────────────────────────┘
-             │ Puppeteer/Playwright
+             │ Puppeteer
              ↓
 ┌─────────────────────────────────────────────────┐
 │            Chrome Browser                        │
 │                                                  │
-│  Logged-in sessions • Full DOM access            │
-│  Handles JS rendering • Rate limiting            │
+│  Persistent sessions • Full DOM access           │
+│  JS rendering • Intelligent rate limiting        │
 └─────────────────────────────────────────────────┘
 ```
 

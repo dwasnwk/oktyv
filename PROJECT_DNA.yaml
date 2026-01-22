@@ -5,11 +5,13 @@
 
 identity:
   name: "Oktyv"
-  tagline: "Browser automation MCP server for career platform integration"
+  tagline: "Complete, production-grade authoritative agent browser automation system"
   purpose: |
-    Connects Career System to external job platforms through browser automation.
-    Enables seamless data extraction from LinkedIn, Indeed, Wellfound via MCP.
+    Authoritative agent for intelligent web interaction and complex web tasks.
+    Autonomous browser automation with session management, intelligent navigation,
+    and structured data extraction across any web platform.
   philosophy: |
+    Option B Perfection - Build complete product first time, not MVP iterations.
     Foundation Out - Build backend infrastructure before surface features.
     Zero Technical Debt - No mocks, stubs, or temporary solutions.
     Cognitive Monopoly - Context and intelligence as competitive advantage.
@@ -42,25 +44,27 @@ architecture:
   
 boundaries:
   does:
-    - "Browser automation via Puppeteer"
-    - "LinkedIn job search and extraction"
-    - "Indeed job search (future)"
+    - "Autonomous browser automation via Puppeteer"
+    - "Intelligent web navigation and interaction"
     - "Session persistence (stays logged in)"
+    - "Platform-specific connectors (LinkedIn, Indeed, etc.)"
+    - "Generic web automation framework"
     - "Rate limiting per platform"
-    - "Canonical job data schema"
+    - "Structured data extraction"
+    - "Error recovery and retry logic"
   does_not:
     - "Store user credentials"
-    - "Manage job applications"
-    - "Track application status"
-    - "Provide AI analysis"
-    - "Replace Career System"
+    - "Manage application state"
+    - "Provide AI analysis (that's Claude's job)"
+    - "Replace domain-specific systems"
     - "Bundle as KERNL plugin"
+    - "Run as browser extension"
 
 interfaces:
-  - workspace: "Career System"
-    relationship: "Data provider"
-    connection: "MCP protocol via Claude Desktop"
-    data_flow: "Oktyv → Claude → Career System"
+  - workspace: "Any MCP Client"
+    relationship: "Browser automation provider"
+    connection: "MCP protocol via Claude Desktop or API"
+    data_flow: "Oktyv → Claude → Client application"
     
   - workspace: "KERNL"
     relationship: "Development tooling"
@@ -123,8 +127,9 @@ performance_targets:
 
 milestones:
   foundation:
-    status: "IN_PROGRESS"
+    status: "COMPLETE"
     started: "2026-01-22"
+    completed: "2026-01-22"
     deliverables:
       - "✅ Git repository initialized"
       - "✅ Project registered with KERNL"
@@ -132,18 +137,19 @@ milestones:
       - "✅ ARCHITECTURE.md created"
       - "✅ package.json configured"
       - "✅ tsconfig.json configured"
-      - "⏳ Source directory structure"
-      - "⏳ Type definitions"
-      - "⏳ MCP server skeleton"
-      - "⏳ Initial git commit"
+      - "✅ Source directory structure"
+      - "✅ Type definitions"
+      - "✅ MCP server skeleton"
+      - "✅ Initial git commit and push to GitHub"
       
-  mvp_linkedin:
-    status: "PLANNED"
+  linkedin_connector:
+    status: "IN_PROGRESS"
     deliverables:
       - "Browser session manager"
       - "LinkedIn connector base"
       - "linkedin_search_jobs tool"
       - "linkedin_get_job tool"
+      - "linkedin_get_company tool"
       - "Rate limiter implementation"
       - "Error handling system"
       - "Unit tests"
@@ -152,7 +158,7 @@ milestones:
   production_ready:
     status: "PLANNED"
     deliverables:
-      - "linkedin_get_company tool"
+      - "Complete LinkedIn implementation"
       - "Indeed connector"
       - "Comprehensive documentation"
       - "Claude Desktop integration guide"
