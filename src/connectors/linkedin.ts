@@ -13,6 +13,7 @@ import type { Company } from '../types/company.js';
 import { OktyvErrorCode, type OktyvError } from '../types/mcp.js';
 import { extractJobListings, scrollToLoadMore } from '../tools/linkedin-search.js';
 import { extractJobDetail } from '../tools/linkedin-job.js';
+import { extractCompanyDetail } from '../tools/linkedin-company.js';
 
 const logger = createLogger('linkedin-connector');
 
@@ -178,12 +179,21 @@ export class LinkedInConnector {
 
       logger.info('Job fetch complete', { jobId, title: job.title });
 
-      // TODO: Fetch company details if requested
+      // Fetch company details if requested
+      let company: Company | undefined;
       if (includeCompany && job.companyId) {
-        logger.warn('Company fetch not yet implemented', { companyId: job.companyId });
+        try {
+          logger.info('Fetching company details', { companyId: job.companyId });
+          company = await this.getCompany(job.companyId);
+        } catch (error) {
+          logger.warn('Failed to fetch company details, continuing without it', { 
+            companyId: job.companyId, 
+            error 
+          });
+        }
       }
 
-      return { job };
+      return { job, company };
 
     } catch (error) {
       logger.error('Job fetch failed', { jobId, error });
@@ -215,14 +225,44 @@ export class LinkedInConnector {
     // Ensure logged in
     await this.ensureLoggedIn();
 
-    // TODO: Implement actual company fetch logic
-    logger.warn('Company fetch not yet implemented');
+    // Get session
+    const session = await this.sessionManager.getSession({
+      platform: this.platform,
+      headless: true,
+    });
 
-    throw {
-      code: OktyvErrorCode.NOT_IMPLEMENTED,
-      message: 'LinkedIn company fetch implementation in progress',
-      retryable: false,
-    } as OktyvError;
+    try {
+      // Navigate to company page
+      const companyUrl = LINKEDIN_URLS.COMPANY(companyId);
+      
+      await this.sessionManager.navigate(this.platform, {
+        url: companyUrl,
+        waitForSelector: 'h1.org-top-card-summary__title',
+        timeout: 30000,
+      });
+
+      // Extract company details
+      const company = await extractCompanyDetail(session.page, companyId);
+
+      logger.info('Company fetch complete', { companyId, name: company.name });
+      return company;
+
+    } catch (error) {
+      logger.error('Company fetch failed', { companyId, error });
+      
+      // If it's already an OktyvError, rethrow it
+      if (error && typeof error === 'object' && 'code' in error) {
+        throw error;
+      }
+
+      // Otherwise wrap in PARSE_ERROR
+      throw {
+        code: OktyvErrorCode.PARSE_ERROR,
+        message: 'Failed to fetch LinkedIn company',
+        details: error,
+        retryable: true,
+      } as OktyvError;
+    }
   }
 
   /**
