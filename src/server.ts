@@ -15,6 +15,7 @@ import { createLogger } from './utils/logger.js';
 import { BrowserSessionManager } from './browser/session.js';
 import { RateLimiter } from './browser/rate-limiter.js';
 import { LinkedInConnector } from './connectors/linkedin.js';
+import { IndeedConnector } from './connectors/indeed.js';
 import type { JobSearchParams } from './types/job.js';
 import { OktyvErrorCode } from './types/mcp.js';
 
@@ -25,6 +26,7 @@ export class OktyvServer {
   private sessionManager: BrowserSessionManager;
   private rateLimiter: RateLimiter;
   private linkedInConnector: LinkedInConnector;
+  private indeedConnector: IndeedConnector;
 
   constructor() {
     this.server = new Server(
@@ -43,6 +45,7 @@ export class OktyvServer {
     this.sessionManager = new BrowserSessionManager();
     this.rateLimiter = new RateLimiter();
     this.linkedInConnector = new LinkedInConnector(this.sessionManager, this.rateLimiter);
+    this.indeedConnector = new IndeedConnector(this.sessionManager, this.rateLimiter);
 
     // Register handlers
     this.setupHandlers();
@@ -117,6 +120,66 @@ export class OktyvServer {
               required: ['companyId'],
             },
           },
+          {
+            name: 'indeed_search_jobs',
+            description: 'Search for jobs on Indeed with filters',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                keywords: {
+                  type: 'string',
+                  description: 'Job title, skills, or keywords to search for',
+                },
+                location: {
+                  type: 'string',
+                  description: 'City, state, or country',
+                },
+                remote: {
+                  type: 'boolean',
+                  description: 'Filter for remote positions only',
+                },
+                limit: {
+                  type: 'number',
+                  description: 'Maximum number of results (default: 10)',
+                  minimum: 1,
+                  maximum: 50,
+                },
+              },
+              required: [],
+            },
+          },
+          {
+            name: 'indeed_get_job',
+            description: 'Get detailed information about a specific job posting on Indeed',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                jobKey: {
+                  type: 'string',
+                  description: 'Indeed job key (from search results)',
+                },
+                includeCompany: {
+                  type: 'boolean',
+                  description: 'Whether to fetch company details (default: false)',
+                },
+              },
+              required: ['jobKey'],
+            },
+          },
+          {
+            name: 'indeed_get_company',
+            description: 'Get detailed information about a company on Indeed',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                companyName: {
+                  type: 'string',
+                  description: 'Indeed company name or ID',
+                },
+              },
+              required: ['companyName'],
+            },
+          },
         ],
       };
     });
@@ -137,6 +200,15 @@ export class OktyvServer {
 
           case 'linkedin_get_company':
             return await this.handleLinkedInGetCompany(args);
+
+          case 'indeed_search_jobs':
+            return await this.handleIndeedSearchJobs(args);
+
+          case 'indeed_get_job':
+            return await this.handleIndeedGetJob(args);
+
+          case 'indeed_get_company':
+            return await this.handleIndeedGetCompany(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -307,6 +379,184 @@ export class OktyvServer {
       };
     } catch (error: any) {
       logger.error('LinkedIn company fetch failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || OktyvErrorCode.UNKNOWN_ERROR,
+                message: error.message || 'An unknown error occurred',
+                retryable: error.retryable !== false,
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleIndeedSearchJobs(args: any): Promise<any> {
+    try {
+      logger.info('Handling indeed_search_jobs', { args });
+
+      // Parse and validate parameters
+      const params: JobSearchParams = {
+        keywords: args.keywords,
+        location: args.location,
+        remote: args.remote,
+        jobType: args.jobType,
+        experienceLevel: args.experienceLevel,
+        salaryMin: args.salaryMin,
+        postedWithin: args.postedWithin,
+        limit: args.limit || 10,
+        offset: args.offset || 0,
+      };
+
+      // Call connector
+      const jobs = await this.indeedConnector.searchJobs(params);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              result: {
+                jobs,
+                totalCount: jobs.length,
+                hasMore: jobs.length >= (params.limit || 10),
+                nextOffset: (params.offset || 0) + jobs.length,
+                query: params,
+                searchedAt: new Date(),
+                platform: 'INDEED',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Indeed job search failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || OktyvErrorCode.UNKNOWN_ERROR,
+                message: error.message || 'An unknown error occurred',
+                retryable: error.retryable !== false,
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleIndeedGetJob(args: any): Promise<any> {
+    try {
+      logger.info('Handling indeed_get_job', { args });
+
+      const { jobKey, includeCompany = false } = args;
+
+      if (!jobKey) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: false,
+                error: {
+                  code: OktyvErrorCode.INVALID_PARAMETERS,
+                  message: 'jobKey is required',
+                  retryable: false,
+                },
+              }, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Call connector
+      const result = await this.indeedConnector.getJob(jobKey, includeCompany);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              result,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Indeed job fetch failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || OktyvErrorCode.UNKNOWN_ERROR,
+                message: error.message || 'An unknown error occurred',
+                retryable: error.retryable !== false,
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleIndeedGetCompany(args: any): Promise<any> {
+    try {
+      logger.info('Handling indeed_get_company', { args });
+
+      const { companyName } = args;
+
+      if (!companyName) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: false,
+                error: {
+                  code: OktyvErrorCode.INVALID_PARAMETERS,
+                  message: 'companyName is required',
+                  retryable: false,
+                },
+              }, null, 2),
+            },
+          ],
+        };
+      }
+
+      // Call connector
+      const company = await this.indeedConnector.getCompany(companyName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              result: company,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Indeed company fetch failed', { error });
 
       return {
         content: [

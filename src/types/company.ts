@@ -5,7 +5,10 @@
 
 import { Platform } from './job.js';
 
+export { Platform };
+
 export enum CompanySize {
+  UNKNOWN = 'UNKNOWN',
   STARTUP = 'STARTUP',              // 1-10
   SMALL = 'SMALL',                  // 11-50
   MEDIUM = 'MEDIUM',                // 51-200
@@ -14,6 +17,7 @@ export enum CompanySize {
 }
 
 export enum Industry {
+  UNKNOWN = 'UNKNOWN',
   TECHNOLOGY = 'TECHNOLOGY',
   FINANCE = 'FINANCE',
   HEALTHCARE = 'HEALTHCARE',
@@ -24,6 +28,8 @@ export enum Industry {
   MEDIA = 'MEDIA',
   HOSPITALITY = 'HOSPITALITY',
   CANNABIS = 'CANNABIS',
+  LEGAL = 'LEGAL',
+  GOVERNMENT = 'GOVERNMENT',
   OTHER = 'OTHER',
 }
 
@@ -32,6 +38,7 @@ export interface Company {
   id: string;                       // Platform-specific ID
   name: string;
   url?: string;                     // Company website
+  website?: string;                 // Alternative website field (Indeed uses this)
   linkedinUrl?: string;             // LinkedIn profile
   source: Platform;
   
@@ -51,6 +58,11 @@ export interface Company {
   
   // Location
   headquarters?: {
+    city?: string;
+    state?: string;
+    country?: string;
+  };
+  location?: {                      // Alternative single location (Indeed uses this)
     city?: string;
     state?: string;
     country?: string;
@@ -82,6 +94,8 @@ export interface Company {
     reviewCount?: number;
     source?: string;                // Glassdoor, Indeed, etc.
   };
+  reviewCount?: number;             // Top-level review count (Indeed uses this)
+  benefits?: string[];              // List of benefits offered
   
   // Metadata
   extractedDate: Date;

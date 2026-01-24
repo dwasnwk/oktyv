@@ -1,7 +1,6 @@
 /**
  * Tools Module Exports
+ * 
+ * Note: Individual tool functions are not exported here to avoid naming conflicts.
+ * Connectors import them directly from their respective files.
  */
-
-export * from './linkedin-search.js';
-export * from './linkedin-job.js';
-export * from './linkedin-company.js';
