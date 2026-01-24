@@ -37,6 +37,7 @@ export enum Platform {
   LINKEDIN = 'LINKEDIN',
   INDEED = 'INDEED',
   WELLFOUND = 'WELLFOUND',
+  GENERIC = 'GENERIC',
   VANGST = 'VANGST',
   DICE = 'DICE',
   REMOTE_CO = 'REMOTE_CO',

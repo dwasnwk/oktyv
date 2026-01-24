@@ -9,6 +9,7 @@ import type { Page } from 'puppeteer';
 import { createLogger } from '../utils/logger.js';
 import type { BrowserSessionManager } from '../browser/session.js';
 import type { RateLimiter } from '../browser/rate-limiter.js';
+import { Platform } from '../types/job.js';
 import { OktyvErrorCode, type OktyvError } from '../types/mcp.js';
 
 const logger = createLogger('generic-browser');
@@ -19,7 +20,7 @@ const logger = createLogger('generic-browser');
 export class GenericBrowserConnector {
   private sessionManager: BrowserSessionManager;
   private rateLimiter: RateLimiter;
-  private platform: 'GENERIC' = 'GENERIC';
+  private platform = Platform.GENERIC;
 
   constructor(sessionManager: BrowserSessionManager, rateLimiter: RateLimiter) {
     this.sessionManager = sessionManager;

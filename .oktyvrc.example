@@ -1,0 +1,42 @@
+# Oktyv Configuration Example
+# Copy this to .oktyvrc, .oktyvrc.json, .oktyvrc.yaml, or oktyv.config.js
+
+# Browser settings
+browser:
+  headless: false              # Show browser window (true for production)
+  timeout: 30000               # Page load timeout in milliseconds
+  viewport:
+    width: 1920                # Browser window width
+    height: 1080               # Browser window height
+
+# Caching settings
+cache:
+  enabled: true                # Enable caching
+  ttl:
+    jobs: 3600                 # Cache job listings for 1 hour
+    companies: 7200            # Cache company data for 2 hours
+    sessions: 1800             # Cache session cookies for 30 minutes
+  maxSize: 500                 # Maximum cached items (LRU eviction)
+
+# Retry logic settings
+retry:
+  enabled: true                # Enable automatic retries
+  maxAttempts: 3               # Retry failed operations 3 times
+  minTimeout: 1000             # Start with 1 second backoff
+  maxTimeout: 10000            # Maximum 10 second backoff
+
+# Rate limiting per platform
+rateLimits:
+  LINKEDIN:
+    requestsPerMinute: 10      # Conservative (LinkedIn is strict)
+  INDEED:
+    requestsPerMinute: 20      # More permissive
+  WELLFOUND:
+    requestsPerMinute: 15      # Moderate
+  GENERIC:
+    requestsPerMinute: 30      # Generic websites
+
+# Progress indicators (CLI only)
+progress:
+  spinners: true               # Show spinner animations
+  bars: true                   # Show progress bars for long operations

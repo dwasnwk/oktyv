@@ -3,10 +3,12 @@
  * 
  * Token bucket implementation for rate limiting per platform.
  * Prevents API blocking and respects platform policies.
+ * Uses caching for token persistence across sessions.
  */
 
 import { createLogger } from '../utils/logger.js';
-import type { Platform } from './types.js';
+import { cache, config } from '../infrastructure/index.js';
+import { Platform } from '../types/job.js';
 
 const logger = createLogger('rate-limiter');
 
@@ -45,34 +47,36 @@ interface TokenBucket {
 }
 
 /**
- * Default rate limit configurations per platform
+ * Get default rate limit configurations from ConfigManager
  */
-export const DEFAULT_RATE_LIMITS: Record<Platform, RateLimitConfig> = {
-  LINKEDIN: {
-    platform: 'LINKEDIN',
-    maxRequests: 10,
-    windowMs: 60000, // 1 minute
-    refillRate: 10 / 60, // 10 requests per 60 seconds = 0.167 per second
-  },
-  INDEED: {
-    platform: 'INDEED',
-    maxRequests: 20,
-    windowMs: 60000,
-    refillRate: 20 / 60,
-  },
-  WELLFOUND: {
-    platform: 'WELLFOUND',
-    maxRequests: 15,
-    windowMs: 60000,
-    refillRate: 15 / 60,
-  },
-  GENERIC: {
-    platform: 'GENERIC',
-    maxRequests: 10,
-    windowMs: 60000,
-    refillRate: 10 / 60,
-  },
-};
+function getDefaultRateLimits(): Record<Platform, RateLimitConfig> {
+  return {
+    [Platform.LINKEDIN]: {
+      platform: Platform.LINKEDIN,
+      maxRequests: config.getRateLimit(Platform.LINKEDIN),
+      windowMs: 60000,
+      refillRate: config.getRateLimit(Platform.LINKEDIN) / 60,
+    },
+    [Platform.INDEED]: {
+      platform: Platform.INDEED,
+      maxRequests: config.getRateLimit(Platform.INDEED),
+      windowMs: 60000,
+      refillRate: config.getRateLimit(Platform.INDEED) / 60,
+    },
+    [Platform.WELLFOUND]: {
+      platform: Platform.WELLFOUND,
+      maxRequests: config.getRateLimit(Platform.WELLFOUND),
+      windowMs: 60000,
+      refillRate: config.getRateLimit(Platform.WELLFOUND) / 60,
+    },
+    [Platform.GENERIC]: {
+      platform: Platform.GENERIC,
+      maxRequests: config.getRateLimit(Platform.GENERIC),
+      windowMs: 60000,
+      refillRate: config.getRateLimit(Platform.GENERIC) / 60,
+    },
+  } as Record<Platform, RateLimitConfig>;
+}
 
 /**
  * Rate limiter using token bucket algorithm
@@ -85,12 +89,12 @@ export class RateLimiter {
     this.buckets = new Map();
     this.configs = new Map();
     
-    // Initialize with default configs
-    Object.values(DEFAULT_RATE_LIMITS).forEach(config => {
+    // Initialize with default configs from ConfigManager
+    Object.values(getDefaultRateLimits()).forEach(config => {
       this.setConfig(config);
     });
     
-    logger.info('RateLimiter initialized with default configs');
+    logger.info('RateLimiter initialized with configs from ConfigManager');
   }
 
   /**
@@ -101,8 +105,8 @@ export class RateLimiter {
     
     this.configs.set(config.platform, { ...config, refillRate });
     
-    // Initialize or reset bucket
-    this.buckets.set(config.platform, {
+    // Try to load cached bucket state
+    this.loadBucketFromCache(config.platform, {
       tokens: config.maxRequests,
       maxTokens: config.maxRequests,
       lastRefill: Date.now(),
@@ -115,6 +119,37 @@ export class RateLimiter {
       windowMs: config.windowMs,
       refillRate,
     });
+  }
+
+  /**
+   * Load bucket state from cache or use default
+   */
+  private async loadBucketFromCache(platform: Platform, defaultBucket: TokenBucket): Promise<void> {
+    const cacheKey = `ratelimit:${platform}`;
+    const cached = await cache.get<TokenBucket>(cacheKey);
+    
+    if (cached) {
+      // Validate cached data
+      if (cached.maxTokens === defaultBucket.maxTokens && cached.refillRate === defaultBucket.refillRate) {
+        this.buckets.set(platform, cached);
+        logger.debug('Loaded rate limit from cache', { platform, tokens: cached.tokens.toFixed(2) });
+        return;
+      }
+    }
+    
+    // Use default bucket
+    this.buckets.set(platform, defaultBucket);
+  }
+
+  /**
+   * Save bucket state to cache
+   */
+  private async saveBucketToCache(platform: Platform): Promise<void> {
+    const bucket = this.buckets.get(platform);
+    if (!bucket) return;
+    
+    const cacheKey = `ratelimit:${platform}`;
+    await cache.set(cacheKey, bucket, 'other', 300); // Cache for 5 minutes
   }
 
   /**
@@ -145,6 +180,8 @@ export class RateLimiter {
         platform, 
         tokensRemaining: bucket.tokens.toFixed(2),
       });
+      // Save updated bucket state to cache
+      await this.saveBucketToCache(platform);
       return true;
     }
 
@@ -175,6 +212,7 @@ export class RateLimiter {
     if (bucket.tokens >= 1) {
       bucket.tokens -= 1;
       logger.debug('Token consumed immediately', { platform, tokensRemaining: bucket.tokens.toFixed(2) });
+      await this.saveBucketToCache(platform);
       return;
     }
 
@@ -191,6 +229,7 @@ export class RateLimiter {
     bucket.tokens -= 1;
     
     logger.debug('Token consumed after wait', { platform, tokensRemaining: bucket.tokens.toFixed(2) });
+    await this.saveBucketToCache(platform);
   }
 
   /**

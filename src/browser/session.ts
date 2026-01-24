@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer';
 import { mkdir } from 'fs/promises';
 import { join } from 'path';
 import { createLogger } from '../utils/logger.js';
+import { retry, progress, config } from '../infrastructure/index.js';
 import type {
   Platform,
   BrowserSession,
@@ -22,15 +23,15 @@ import type {
 const logger = createLogger('session-manager');
 
 /**
- * Default browser session configuration
+ * Get default browser session configuration from ConfigManager
  */
-const DEFAULT_CONFIG: Partial<BrowserSessionConfig> = {
-  headless: true,
-  viewport: {
-    width: 1920,
-    height: 1080,
-  },
-};
+function getDefaultConfig(): Partial<BrowserSessionConfig> {
+  const browserConfig = config.getBrowserConfig();
+  return {
+    headless: browserConfig.headless,
+    viewport: browserConfig.viewport,
+  };
+}
 
 /**
  * Manages browser sessions with persistent state and login detection
@@ -83,7 +84,7 @@ export class BrowserSessionManager {
 
       // Merge with default config
       const finalConfig: BrowserSessionConfig = {
-        ...DEFAULT_CONFIG,
+        ...getDefaultConfig(),
         ...config,
         userDataDir,
       };
@@ -156,29 +157,46 @@ export class BrowserSessionManager {
       timeout = 30000,
     } = options;
 
-    try {
-      logger.debug('Navigating to URL', { platform, url });
+    // Use retry logic for navigation
+    await retry.execute(
+      async () => {
+        try {
+          progress.startSpinner(`Navigating to ${url}...`);
+          logger.debug('Navigating to URL', { platform, url });
 
-      // Navigate to URL
-      await session.page.goto(url, {
-        timeout,
-        waitUntil: waitForNetworkIdle ? 'networkidle2' : 'load',
-      });
+          // Navigate to URL
+          await session.page.goto(url, {
+            timeout,
+            waitUntil: waitForNetworkIdle ? 'networkidle2' : 'load',
+          });
 
-      // Wait for specific selector if provided
-      if (waitForSelector) {
-        logger.debug('Waiting for selector', { platform, selector: waitForSelector });
-        await session.page.waitForSelector(waitForSelector, { timeout });
+          // Wait for specific selector if provided
+          if (waitForSelector) {
+            progress.updateSpinner(`Waiting for page elements...`);
+            logger.debug('Waiting for selector', { platform, selector: waitForSelector });
+            await session.page.waitForSelector(waitForSelector, { timeout });
+          }
+
+          session.lastActivityAt = new Date();
+          progress.succeedSpinner(`Loaded ${url}`);
+          logger.info('Navigation complete', { platform, url });
+
+        } catch (error) {
+          progress.failSpinner(`Failed to load ${url}`);
+          logger.error('Navigation failed', { platform, url, error });
+          session.state = 'ERROR';
+          throw new Error(`Navigation failed for ${platform}: ${error}`);
+        }
+      },
+      {
+        retries: 3,
+        minTimeout: 1000,
+        maxTimeout: 5000,
+        onFailedAttempt: (error, attempt) => {
+          logger.warn('Navigation retry', { platform, url, attempt, error: error.message });
+        },
       }
-
-      session.lastActivityAt = new Date();
-      logger.info('Navigation complete', { platform, url });
-
-    } catch (error) {
-      logger.error('Navigation failed', { platform, url, error });
-      session.state = 'ERROR';
-      throw new Error(`Navigation failed for ${platform}: ${error}`);
-    }
+    );
   }
 
   /**

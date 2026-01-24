@@ -8,7 +8,7 @@
 import { createLogger } from '../utils/logger.js';
 import type { BrowserSessionManager } from '../browser/session.js';
 import type { RateLimiter } from '../browser/rate-limiter.js';
-import type { Job, JobSearchParams } from '../types/job.js';
+import { Platform, type Job, type JobSearchParams } from '../types/job.js';
 import type { Company } from '../types/company.js';
 import { OktyvErrorCode, type OktyvError } from '../types/mcp.js';
 import { extractJobListings, scrollToLoadMore } from '../tools/linkedin-search.js';
@@ -35,7 +35,7 @@ const LINKEDIN_URLS = {
 export class LinkedInConnector {
   private sessionManager: BrowserSessionManager;
   private rateLimiter: RateLimiter;
-  private platform: 'LINKEDIN' = 'LINKEDIN';
+  private platform = Platform.LINKEDIN;
 
   constructor(sessionManager: BrowserSessionManager, rateLimiter: RateLimiter) {
     this.sessionManager = sessionManager;

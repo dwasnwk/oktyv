@@ -6,11 +6,9 @@
  */
 
 import type { Browser, Page, PuppeteerLaunchOptions } from 'puppeteer';
+import type { Platform } from '../types/job.js';
 
-/**
- * Platform identifier for browser sessions
- */
-export type Platform = 'LINKEDIN' | 'INDEED' | 'WELLFOUND' | 'GENERIC';
+export type { Platform };
 
 /**
  * Browser session state
