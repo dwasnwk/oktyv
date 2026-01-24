@@ -1,14 +1,14 @@
 # Oktyv - Current Status
 
-**Version:** 0.1.0-alpha.1  
-**Last Updated:** 2025-01-23  
-**Status:** LinkedIn Connector Complete ✅
+**Version:** 0.1.0-alpha.2  
+**Last Updated:** 2026-01-24  
+**Status:** LinkedIn + Indeed Connectors Complete ✅
 
 ---
 
-## 🎯 Milestone: LinkedIn Integration Complete
+## 🎯 Milestone: LinkedIn + Indeed Integration Complete
 
-The LinkedIn connector is **production-ready** with all three tools fully implemented and tested via TypeScript compilation.
+Both LinkedIn and Indeed connectors are **production-ready** with all tools fully implemented and tested via TypeScript compilation.
 
 ### ✅ Completed Features
 
@@ -45,6 +45,32 @@ All three MCP tools fully implemented with DOM extraction:
 - Industry mapping: 11 categories (TECHNOLOGY, FINANCE, HEALTHCARE, CANNABIS, etc.)
 - Returns complete `Company` object
 
+#### Indeed Connector (`IndeedConnector`)
+All three MCP tools fully implemented with DOM extraction:
+
+**1. indeed_search_jobs**
+- Search with filters: keywords, location, remote, job type, experience level, posted date
+- DOM parsing of job cards from search results
+- Extracts: job key, title, company, location (city/state/country), remote/hybrid detection, posted date, salary, snippet
+- Pagination support via scroll-to-load-more
+- Returns structured `Job[]` array
+
+**2. indeed_get_job**
+- Full job detail extraction from individual posting pages
+- Extracts: title, company, location, full HTML description, job type
+- Parses: applicant count, posted date (relative → absolute), salary ranges
+- Pattern-based extraction: skills (20 max), requirements (10 max), benefits
+- Optional company fetch via `includeCompany` parameter
+- Returns `{ job: Job; company?: Company }`
+
+**3. indeed_get_company**
+- Complete company profile extraction from Indeed company pages
+- Extracts: name, tagline, description, website, industry, size
+- Company metrics: employee count ranges, founded year, rating, review count
+- Location: headquarters parsing
+- Benefits list extraction
+- Returns complete `Company` object
+
 #### Type System
 - **Canonical Schemas**: Platform-agnostic Job and Company interfaces
 - **Enums**: JobType, JobLocation, ExperienceLevel, Platform, CompanySize, Industry
@@ -53,9 +79,9 @@ All three MCP tools fully implemented with DOM extraction:
 
 #### Quality Metrics
 - **TypeScript**: Strict mode, 0 errors, 0 warnings
-- **LOC**: ~9,500 total (source: ~1,500, docs: ~1,000, config: ~500)
+- **LOC**: ~11,000 total (source: ~4,020, docs: ~1,000, config: ~500)
 - **Architecture**: Clean separation (browser / connectors / tools / types / utils)
-- **Git Commits**: 7 commits, all passing builds
+- **Git Commits**: 8 commits, all passing builds
 - **Error Handling**: Comprehensive with retryable flags
 
 ---
@@ -74,7 +100,6 @@ All three MCP tools fully implemented with DOM extraction:
 - ⚠️ Installation guide needed
 
 ### Additional Platforms
-- ❌ Indeed connector (planned)
 - ❌ Wellfound connector (planned)
 - Infrastructure ready, just needs implementation
 
@@ -101,7 +126,6 @@ All three MCP tools fully implemented with DOM extraction:
    - Error handling verification
 
 ### Short-Term (v0.2.0)
-- Indeed connector implementation
 - Wellfound connector implementation
 - CLI tool for standalone usage
 - Enhanced error messages
@@ -124,18 +148,22 @@ oktyv/
 │   │   ├── rate-limiter.ts # RateLimiter (280 LOC)
 │   │   └── types.ts      # Browser-specific types
 │   ├── connectors/       # Platform-specific logic
-│   │   └── linkedin.ts   # LinkedInConnector (280 LOC)
+│   │   ├── linkedin.ts   # LinkedInConnector (280 LOC)
+│   │   └── indeed.ts     # IndeedConnector (325 LOC)
 │   ├── tools/            # DOM extraction functions
 │   │   ├── linkedin-search.ts   # Job search (300 LOC)
 │   │   ├── linkedin-job.ts      # Job detail (380 LOC)
-│   │   └── linkedin-company.ts  # Company detail (330 LOC)
+│   │   ├── linkedin-company.ts  # Company detail (330 LOC)
+│   │   ├── indeed-search.ts     # Job search (377 LOC)
+│   │   ├── indeed-job.ts        # Job detail (384 LOC)
+│   │   └── indeed-company.ts    # Company detail (333 LOC)
 │   ├── types/            # TypeScript schemas
 │   │   ├── job.ts        # Job, JobSearchParams (127 LOC)
-│   │   ├── company.ts    # Company (101 LOC)
+│   │   ├── company.ts    # Company (extended, 120 LOC)
 │   │   └── mcp.ts        # OktyvError, tool schemas (145 LOC)
 │   ├── utils/            # Shared utilities
 │   │   └── logger.ts     # Winston logger (60 LOC)
-│   └── server.ts         # MCP server (220 LOC)
+│   └── server.ts         # MCP server (420 LOC)
 ├── docs/                 # Architecture, API docs
 ├── tests/                # Unit and integration tests (empty)
 └── branding/             # Logos (3 PNG files)
@@ -160,9 +188,13 @@ oktyv/
 | LinkedIn Search | ✅ Complete | 300 | 0% |
 | LinkedIn Job Detail | ✅ Complete | 380 | 0% |
 | LinkedIn Company | ✅ Complete | 330 | 0% |
-| Type System | ✅ Complete | 400 | N/A |
-| MCP Server | ✅ Complete | 220 | 0% |
-| **Total** | **✅ Complete** | **~2,600** | **0%** |
+| Indeed Connector | ✅ Complete | 325 | 0% |
+| Indeed Search | ✅ Complete | 377 | 0% |
+| Indeed Job Detail | ✅ Complete | 384 | 0% |
+| Indeed Company | ✅ Complete | 333 | 0% |
+| Type System | ✅ Complete | 450 | N/A |
+| MCP Server | ✅ Complete | 420 | 0% |
+| **Total** | **✅ Complete** | **~4,020** | **0%** |
 
 ---
 
@@ -218,8 +250,8 @@ const companyResult = await server.handleLinkedInGetCompany({
 - [ ] Real-world testing (manual)
 - [x] Version tagged
 
-**Ready for alpha release** - suitable for testing and feedback, not production use.
+**Ready for alpha testing** - LinkedIn and Indeed connectors functional, suitable for testing and feedback.
 
 ---
 
-**Next Milestone:** v0.1.0 (Stable) - Add tests and validate with real LinkedIn
+**Next Milestone:** v0.2.0 - Add Wellfound connector, generic browser tools, and comprehensive tests
