@@ -97,7 +97,7 @@ export class TransactionManager {
         
         // Execute all operations in a transaction
         await prisma.$transaction(
-          async (tx) => {
+          async (tx: any) => { // Prisma transaction client
             for (const operation of operations) {
               const result = await this.executeOperation(tx, operation);
               results.push(result);

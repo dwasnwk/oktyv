@@ -257,7 +257,7 @@ export class ConnectionPool {
     
     const closePromises: Promise<void>[] = [];
     
-    for (const connection of this.connections.values()) {
+    for (const _connection of this.connections.values()) {
       // Specific cleanup will be handled by PrismaManager/MongoManager
       closePromises.push(Promise.resolve());
     }
