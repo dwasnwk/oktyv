@@ -1,7 +1,7 @@
 {
   "name": "oktyv",
-  "version": "0.5.0-alpha.1",
-  "description": "Universal automation layer with 7 core engines (Browser + Vault + API + Database complete, Email/File/Cron in progress)",
+  "version": "0.6.0-alpha.1",
+  "description": "Universal automation layer with 7 core engines (Browser + Vault + API + Database + Email complete, File/Cron in progress)",
   "main": "dist/index.js",
   "bin": {
     "oktyv": "dist/cli/index.js"
@@ -11,10 +11,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "test": "tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts",
-    "test:watch": "tsx --test --watch tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts",
-    "test:coverage": "npx c8 --reporter=html --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts",
-    "test:coverage:text": "npx c8 --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts",
+    "test": "tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts",
+    "test:watch": "tsx --test --watch tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts",
+    "test:coverage": "npx c8 --reporter=html --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts",
+    "test:coverage:text": "npx c8 --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts",
     "lint": "npx eslint src --ext .ts",
     "lint:fix": "npx eslint src --ext .ts --fix",
     "format": "npx prettier --write \"src/**/*.ts\"",
@@ -47,9 +47,13 @@
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
     "cosmiconfig": "^9.0.0",
+    "googleapis": "^140.0.1",
+    "imap": "^0.8.19",
     "lru-cache": "^11.2.4",
+    "mailparser": "^3.9.1",
     "mongodb": "^6.21.0",
     "mysql2": "^3.16.1",
+    "nodemailer": "^6.10.1",
     "ora": "^8.2.0",
     "p-retry": "^6.2.1",
     "pg": "^8.17.2",
@@ -59,7 +63,9 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^22.19.7",
+    "@types/nodemailer": "^7.0.5",
     "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
