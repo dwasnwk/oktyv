@@ -21,6 +21,8 @@ import { GenericBrowserConnector } from './connectors/generic.js';
 import type { JobSearchParams } from './types/job.js';
 import { OktyvErrorCode } from './types/mcp.js';
 import { VaultEngine } from './tools/vault/VaultEngine.js';
+import { FileEngine } from './tools/file/FileEngine.js';
+import { fileTools } from './tools/file/tools.js';
 
 const logger = createLogger('server');
 
@@ -33,6 +35,7 @@ export class OktyvServer {
   private wellfoundConnector: WellfoundConnector;
   private genericConnector: GenericBrowserConnector;
   private vaultEngine: VaultEngine;
+  private fileEngine: FileEngine;
 
   constructor() {
     this.server = new Server(
@@ -57,6 +60,9 @@ export class OktyvServer {
 
     // Initialize vault infrastructure
     this.vaultEngine = new VaultEngine();
+
+    // Initialize file infrastructure
+    this.fileEngine = new FileEngine();
 
     // Register handlers
     this.setupHandlers();
