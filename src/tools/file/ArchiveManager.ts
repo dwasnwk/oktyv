@@ -112,7 +112,7 @@ export class ArchiveManager {
     const basenames = sources.map(s => path.basename(s));
     const cwd = path.dirname(sources[0]); // Assume all in same directory
     
-    const options: tar.CreateOptions = {
+    const options: any = {
       gzip,
       file: destination,
       cwd,
@@ -154,7 +154,7 @@ export class ArchiveManager {
   private async extractZip(archive: string, destination: string): Promise<void> {
     return new Promise((resolve, reject) => {
       fs.createReadStream(archive)
-        .pipe(unzipper.Extract({ path: destination }))
+        .pipe(unzipper.Extract({ path: destination }) as any)
         .on('close', () => resolve())
         .on('error', reject);
     });
@@ -207,7 +207,7 @@ export class ArchiveManager {
       const entries: ArchiveEntry[] = [];
       
       fs.createReadStream(archivePath)
-        .pipe(unzipper.Parse())
+        .pipe(unzipper.Parse() as any)
         .on('entry', (entry: any) => {
           entries.push({
             path: entry.path,

@@ -1,7 +1,7 @@
 {
   "name": "oktyv",
-  "version": "0.6.0-alpha.1",
-  "description": "Universal automation layer with 7 core engines (Browser + Vault + API + Database + Email complete, File/Cron in progress)",
+  "version": "1.0.0-alpha.1",
+  "description": "Universal automation layer with ALL 7 engines complete (Browser, Vault, API, Database, Email, File, Cron)",
   "main": "dist/index.js",
   "bin": {
     "oktyv": "dist/cli/index.js"
@@ -76,9 +76,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/mailparser": "^3.4.6",
     "@types/node": "^22.19.7",
     "@types/nodemailer": "^7.0.5",
+    "@types/unzipper": "^0.10.11",
     "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",

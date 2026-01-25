@@ -96,8 +96,8 @@ export class LocalOperations {
         end: end !== undefined ? end - 1 : undefined, // end is inclusive in createReadStream
       });
       
-      stream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
+      stream.on('data', (chunk) => {
+        chunks.push(Buffer.from(chunk));
       });
       
       stream.on('end', () => {

@@ -44,7 +44,7 @@ export class HashManager {
       const hash = crypto.createHash(algorithm);
       const stream = fs.createReadStream(filePath);
       
-      stream.on('data', (chunk: Buffer) => {
+      stream.on('data', (chunk) => {
         hash.update(chunk);
       });
       

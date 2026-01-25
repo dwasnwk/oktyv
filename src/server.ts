@@ -22,7 +22,8 @@ import type { JobSearchParams } from './types/job.js';
 import { OktyvErrorCode } from './types/mcp.js';
 import { VaultEngine } from './tools/vault/VaultEngine.js';
 import { FileEngine } from './tools/file/FileEngine.js';
-import { fileTools } from './tools/file/tools.js';
+import { CronEngine } from './tools/cron/CronEngine.js';
+import { cronTools } from './tools/cron/tools.js';
 
 const logger = createLogger('server');
 
@@ -35,13 +36,14 @@ export class OktyvServer {
   private wellfoundConnector: WellfoundConnector;
   private genericConnector: GenericBrowserConnector;
   private vaultEngine: VaultEngine;
-  private fileEngine: FileEngine;
+  private fileEngine: FileEngine; // TODO: Integrate File Engine handlers
+  private cronEngine: CronEngine;
 
   constructor() {
     this.server = new Server(
       {
         name: 'oktyv',
-        version: '0.1.0-alpha.1',
+        version: '1.0.0-alpha.1',
       },
       {
         capabilities: {
@@ -64,6 +66,9 @@ export class OktyvServer {
     // Initialize file infrastructure
     this.fileEngine = new FileEngine();
 
+    // Initialize cron infrastructure
+    this.cronEngine = new CronEngine();
+
     // Register handlers
     this.setupHandlers();
 
@@ -71,6 +76,9 @@ export class OktyvServer {
   }
 
   private setupHandlers(): void {
+    // TODO: Integrate File Engine handlers
+    void this.fileEngine;
+    
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
       logger.debug('Received list_tools request');
@@ -507,6 +515,9 @@ export class OktyvServer {
               properties: {},
             },
           },
+
+          // Cron Engine Tools
+          ...cronTools,
         ],
       };
     });
@@ -585,6 +596,43 @@ export class OktyvServer {
 
           case 'vault_list_vaults':
             return await this.handleVaultListVaults(args);
+
+          // Cron Engine Tools
+          case 'cron_create_task':
+            return await this.handleCronCreateTask(args);
+
+          case 'cron_update_task':
+            return await this.handleCronUpdateTask(args);
+
+          case 'cron_delete_task':
+            return await this.handleCronDeleteTask(args);
+
+          case 'cron_list_tasks':
+            return await this.handleCronListTasks(args);
+
+          case 'cron_get_task':
+            return await this.handleCronGetTask(args);
+
+          case 'cron_enable_task':
+            return await this.handleCronEnableTask(args);
+
+          case 'cron_disable_task':
+            return await this.handleCronDisableTask(args);
+
+          case 'cron_execute_now':
+            return await this.handleCronExecuteNow(args);
+
+          case 'cron_get_history':
+            return await this.handleCronGetHistory(args);
+
+          case 'cron_get_statistics':
+            return await this.handleCronGetStatistics(args);
+
+          case 'cron_clear_history':
+            return await this.handleCronClearHistory(args);
+
+          case 'cron_validate_expression':
+            return await this.handleCronValidateExpression(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -1750,6 +1798,527 @@ export class OktyvServer {
     }
   }
 
+  // ============================================================================
+  // Cron Engine Handlers
+  // ============================================================================
+
+  private async handleCronCreateTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_create_task', { name: args.name });
+
+      const task = this.cronEngine.createTask({
+        name: args.name,
+        description: args.description,
+        schedule: {
+          type: args.scheduleType,
+          expression: args.cronExpression,
+          interval: args.interval,
+          executeAt: args.executeAt ? new Date(args.executeAt) : undefined,
+        },
+        action: {
+          type: args.actionType,
+          config: args.actionConfig,
+        },
+        options: {
+          timezone: args.timezone,
+          retryCount: args.retryCount,
+          retryDelay: args.retryDelay,
+          timeout: args.timeout,
+          enabled: args.enabled,
+        },
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              task,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron create task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to create task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronUpdateTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_update_task', { taskId: args.taskId });
+
+      const updates: any = {};
+
+      if (args.name) updates.name = args.name;
+      if (args.description !== undefined) updates.description = args.description;
+      
+      if (args.cronExpression || args.interval || args.executeAt) {
+        updates.schedule = {};
+        if (args.cronExpression) updates.schedule.expression = args.cronExpression;
+        if (args.interval) updates.schedule.interval = args.interval;
+        if (args.executeAt) updates.schedule.executeAt = new Date(args.executeAt);
+      }
+
+      if (args.actionConfig) {
+        updates.action = { config: args.actionConfig };
+      }
+
+      if (args.timezone || args.retryCount !== undefined || args.timeout) {
+        updates.options = {};
+        if (args.timezone) updates.options.timezone = args.timezone;
+        if (args.retryCount !== undefined) updates.options.retryCount = args.retryCount;
+        if (args.timeout) updates.options.timeout = args.timeout;
+      }
+
+      const task = this.cronEngine.updateTask(args.taskId, updates);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              task,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron update task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to update task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronDeleteTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_delete_task', { taskId: args.taskId });
+
+      this.cronEngine.deleteTask(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Task ${args.taskId} deleted`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron delete task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to delete task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronListTasks(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_list_tasks', { args });
+
+      const tasks = this.cronEngine.taskManager.listTasks({
+        enabled: args.enabled,
+        scheduleType: args.scheduleType,
+        actionType: args.actionType,
+        limit: args.limit || 50,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              tasks,
+              count: tasks.length,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron list tasks failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to list tasks',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronGetTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_get_task', { taskId: args.taskId });
+
+      const task = this.cronEngine.taskManager.getTask(args.taskId);
+
+      if (!task) {
+        throw new Error(`Task not found: ${args.taskId}`);
+      }
+
+      // Get next run time if task is enabled
+      let nextRun = null;
+      if (task.schedule.type === 'cron' && task.schedule.expression) {
+        nextRun = this.cronEngine.scheduler.getNextRun(
+          task.schedule.expression,
+          task.options.timezone
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              task,
+              nextRun,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron get task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to get task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronEnableTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_enable_task', { taskId: args.taskId });
+
+      this.cronEngine.enableTask(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Task ${args.taskId} enabled`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron enable task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to enable task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronDisableTask(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_disable_task', { taskId: args.taskId });
+
+      this.cronEngine.disableTask(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Task ${args.taskId} disabled`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron disable task failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to disable task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronExecuteNow(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_execute_now', { taskId: args.taskId });
+
+      await this.cronEngine.executeNow(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Task ${args.taskId} executed`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron execute now failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to execute task',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronGetHistory(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_get_history', { taskId: args.taskId });
+
+      const history = this.cronEngine.history.getHistory(
+        args.taskId,
+        args.limit || 50
+      );
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              history,
+              count: history.length,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron get history failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to get history',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronGetStatistics(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_get_statistics', { taskId: args.taskId });
+
+      const stats = this.cronEngine.history.getStatistics(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              statistics: stats,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron get statistics failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to get statistics',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronClearHistory(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_clear_history', { taskId: args.taskId });
+
+      const deletedCount = this.cronEngine.history.clearHistory(args.taskId);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Cleared ${deletedCount} execution records`,
+              deletedCount,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron clear history failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to clear history',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleCronValidateExpression(args: any): Promise<any> {
+    try {
+      logger.info('Handling cron_validate_expression', { expression: args.expression });
+
+      const isValid = this.cronEngine.scheduler.validate(args.expression);
+      const nextRun = isValid 
+        ? this.cronEngine.scheduler.getNextRun(args.expression, args.timezone)
+        : null;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              valid: isValid,
+              nextRun,
+              expression: args.expression,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Cron validate expression failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'CRON_ERROR',
+                message: error.message || 'Failed to validate expression',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
   async connect(transport: StdioServerTransport): Promise<void> {
     await this.server.connect(transport);
     logger.info('Server connected to transport');
@@ -1760,6 +2329,9 @@ export class OktyvServer {
     
     // Close all browser sessions via session manager
     await this.sessionManager.closeAllSessions();
+    
+    // Close cron engine
+    this.cronEngine.close();
     
     await this.server.close();
     logger.info('Server closed');

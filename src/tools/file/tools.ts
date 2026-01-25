@@ -1,5 +1,3 @@
-import { z } from 'zod';
-import { FileEngine } from './FileEngine.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 
 // ============================================================================
