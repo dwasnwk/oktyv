@@ -20,6 +20,7 @@ import { WellfoundConnector } from './connectors/wellfound.js';
 import { GenericBrowserConnector } from './connectors/generic.js';
 import type { JobSearchParams } from './types/job.js';
 import { OktyvErrorCode } from './types/mcp.js';
+import { VaultEngine } from './tools/vault/VaultEngine.js';
 
 const logger = createLogger('server');
 
@@ -31,6 +32,7 @@ export class OktyvServer {
   private indeedConnector: IndeedConnector;
   private wellfoundConnector: WellfoundConnector;
   private genericConnector: GenericBrowserConnector;
+  private vaultEngine: VaultEngine;
 
   constructor() {
     this.server = new Server(
@@ -52,6 +54,9 @@ export class OktyvServer {
     this.indeedConnector = new IndeedConnector(this.sessionManager, this.rateLimiter);
     this.wellfoundConnector = new WellfoundConnector(this.sessionManager, this.rateLimiter);
     this.genericConnector = new GenericBrowserConnector(this.sessionManager, this.rateLimiter);
+
+    // Initialize vault infrastructure
+    this.vaultEngine = new VaultEngine();
 
     // Register handlers
     this.setupHandlers();
@@ -393,6 +398,109 @@ export class OktyvServer {
               required: ['fields'],
             },
           },
+          // Vault Engine Tools
+          {
+            name: 'vault_set',
+            description: 'Store an encrypted credential in a vault. Creates vault if it doesn\'t exist. Master key stored in OS keychain (Keychain/Credential Manager).',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                vaultName: {
+                  type: 'string',
+                  description: 'Vault name (lowercase, alphanumeric, hyphens)',
+                  pattern: '^[a-z0-9-]+$',
+                  minLength: 1,
+                  maxLength: 50,
+                },
+                credentialName: {
+                  type: 'string',
+                  description: 'Credential name (lowercase, alphanumeric, hyphens, underscores)',
+                  pattern: '^[a-z0-9-_]+$',
+                  minLength: 1,
+                  maxLength: 100,
+                },
+                value: {
+                  type: 'string',
+                  description: 'Secret value to store (will be encrypted with AES-256-GCM)',
+                  minLength: 1,
+                  maxLength: 10000,
+                },
+              },
+              required: ['vaultName', 'credentialName', 'value'],
+            },
+          },
+          {
+            name: 'vault_get',
+            description: 'Retrieve and decrypt a credential from a vault. Returns the plaintext secret value.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                vaultName: {
+                  type: 'string',
+                  description: 'Vault name',
+                },
+                credentialName: {
+                  type: 'string',
+                  description: 'Credential name',
+                },
+              },
+              required: ['vaultName', 'credentialName'],
+            },
+          },
+          {
+            name: 'vault_list',
+            description: 'List all credential names in a vault (values not included for security). Returns array of credential names.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                vaultName: {
+                  type: 'string',
+                  description: 'Vault name',
+                },
+              },
+              required: ['vaultName'],
+            },
+          },
+          {
+            name: 'vault_delete',
+            description: 'Delete a credential from a vault. This is permanent and cannot be undone.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                vaultName: {
+                  type: 'string',
+                  description: 'Vault name',
+                },
+                credentialName: {
+                  type: 'string',
+                  description: 'Credential name to delete',
+                },
+              },
+              required: ['vaultName', 'credentialName'],
+            },
+          },
+          {
+            name: 'vault_delete_vault',
+            description: 'Delete an entire vault including all credentials and master key. This is permanent and cannot be undone. Use with caution.',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                vaultName: {
+                  type: 'string',
+                  description: 'Vault name to delete',
+                },
+              },
+              required: ['vaultName'],
+            },
+          },
+          {
+            name: 'vault_list_vaults',
+            description: 'List all vaults. Returns array of vault names.',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+            },
+          },
         ],
       };
     });
@@ -452,6 +560,25 @@ export class OktyvServer {
 
           case 'browser_form_fill':
             return await this.handleBrowserFormFill(args);
+
+          // Vault Engine Tools
+          case 'vault_set':
+            return await this.handleVaultSet(args);
+
+          case 'vault_get':
+            return await this.handleVaultGet(args);
+
+          case 'vault_list':
+            return await this.handleVaultList(args);
+
+          case 'vault_delete':
+            return await this.handleVaultDelete(args);
+
+          case 'vault_delete_vault':
+            return await this.handleVaultDeleteVault(args);
+
+          case 'vault_list_vaults':
+            return await this.handleVaultListVaults(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -1381,6 +1508,234 @@ export class OktyvServer {
                 code: error.code || OktyvErrorCode.UNKNOWN_ERROR,
                 message: error.message || 'An unknown error occurred',
                 retryable: error.retryable !== false,
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  // Vault Engine Handlers
+
+  private async handleVaultSet(args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_set', { vaultName: args.vaultName, credentialName: args.credentialName });
+
+      await this.vaultEngine.set(args.vaultName, args.credentialName, args.value);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Credential "${args.credentialName}" stored in vault "${args.vaultName}"`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault set failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to store credential',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleVaultGet(args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_get', { vaultName: args.vaultName, credentialName: args.credentialName });
+
+      const value = await this.vaultEngine.get(args.vaultName, args.credentialName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              credentialName: args.credentialName,
+              value,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault get failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to retrieve credential',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleVaultList(args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_list', { vaultName: args.vaultName });
+
+      const credentials = await this.vaultEngine.list(args.vaultName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              vaultName: args.vaultName,
+              credentials,
+              count: credentials.length,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault list failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to list credentials',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleVaultDelete(args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_delete', { vaultName: args.vaultName, credentialName: args.credentialName });
+
+      await this.vaultEngine.delete(args.vaultName, args.credentialName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Credential "${args.credentialName}" deleted from vault "${args.vaultName}"`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault delete failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to delete credential',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleVaultDeleteVault(args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_delete_vault', { vaultName: args.vaultName });
+
+      await this.vaultEngine.deleteVault(args.vaultName);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              message: `Vault "${args.vaultName}" and all its credentials permanently deleted`,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault delete vault failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to delete vault',
+              },
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  }
+
+  private async handleVaultListVaults(_args: any): Promise<any> {
+    try {
+      logger.info('Handling vault_list_vaults');
+
+      const vaults = await this.vaultEngine.listVaults();
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              vaults,
+              count: vaults.length,
+            }, null, 2),
+          },
+        ],
+      };
+    } catch (error: any) {
+      logger.error('Vault list vaults failed', { error });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: false,
+              error: {
+                code: error.code || 'VAULT_ERROR',
+                message: error.message || 'Failed to list vaults',
               },
             }, null, 2),
           },
