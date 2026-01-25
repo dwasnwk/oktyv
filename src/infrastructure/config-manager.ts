@@ -11,7 +11,7 @@ import { Platform } from '../types/job.js';
 // Configuration schema with validation
 const ConfigSchema = z.object({
   browser: z.object({
-    headless: z.boolean().default(true),
+    headless: z.boolean().default(false),
     timeout: z.number().min(1000).max(120000).default(30000),
     viewport: z.object({
       width: z.number().min(800).max(3840).default(1920),
@@ -65,7 +65,7 @@ export class ConfigManager {
   private config: OktyvConfig;
   private loaded: boolean = false;
 
-  private constructor() {
+  public constructor() {
     // Default configuration
     this.config = ConfigSchema.parse({});
   }
@@ -81,10 +81,62 @@ export class ConfigManager {
   }
 
   /**
+   * Load configuration directly from object
+   * @param config - Partial configuration object to merge with defaults
+   */
+  public async load(config?: Partial<OktyvConfig>): Promise<void> {
+    if (!config) {
+      this.loaded = true;
+      return;
+    }
+
+    try {
+      // Deep merge with defaults
+      const merged = {
+        browser: {
+          ...this.config.browser,
+          ...config.browser,
+          viewport: {
+            ...this.config.browser.viewport,
+            ...config.browser?.viewport,
+          },
+        },
+        cache: {
+          ...this.config.cache,
+          ...config.cache,
+          ttl: {
+            ...this.config.cache.ttl,
+            ...config.cache?.ttl,
+          },
+        },
+        retry: {
+          ...this.config.retry,
+          ...config.retry,
+        },
+        rateLimits: {
+          ...this.config.rateLimits,
+          ...config.rateLimits,
+        },
+        progress: {
+          ...this.config.progress,
+          ...config.progress,
+        },
+      };
+
+      // Validate merged config
+      this.config = ConfigSchema.parse(merged);
+      this.loaded = true;
+    } catch (error) {
+      throw new Error(`Invalid configuration: ${error}`);
+    }
+  }
+
+  /**
    * Load configuration from file system
    * Searches for .oktyvrc, .oktyvrc.json, .oktyvrc.yaml, oktyv.config.js
+   * @param searchFrom - Optional directory to start searching from
    */
-  public async load(searchFrom?: string): Promise<void> {
+  public async loadFromFile(searchFrom?: string): Promise<void> {
     if (this.loaded) return; // Only load once
 
     try {
@@ -92,22 +144,7 @@ export class ConfigManager {
       const result = await explorer.search(searchFrom);
 
       if (result && result.config) {
-        // Merge loaded config with defaults
-        const merged = {
-          browser: { ...this.config.browser, ...result.config.browser },
-          cache: {
-            ...this.config.cache,
-            ...result.config.cache,
-            ttl: { ...this.config.cache.ttl, ...result.config.cache?.ttl },
-          },
-          retry: { ...this.config.retry, ...result.config.retry },
-          rateLimits: { ...this.config.rateLimits, ...result.config.rateLimits },
-          progress: { ...this.config.progress, ...result.config.progress },
-        };
-
-        // Validate merged config
-        this.config = ConfigSchema.parse(merged);
-        this.loaded = true;
+        await this.load(result.config);
       } else {
         // No config file found, use defaults
         this.loaded = true;
@@ -124,6 +161,14 @@ export class ConfigManager {
    */
   public getConfig(): OktyvConfig {
     return this.config;
+  }
+
+  /**
+   * Get configuration section by key
+   * @param key - Configuration section key
+   */
+  public get<K extends keyof OktyvConfig>(key: K): OktyvConfig[K] {
+    return this.config[key];
   }
 
   /**
@@ -169,6 +214,3 @@ export class ConfigManager {
     this.loaded = false;
   }
 }
-
-// Export singleton instance
-export const config = ConfigManager.getInstance();

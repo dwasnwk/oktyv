@@ -4,15 +4,20 @@
  * Provides exponential backoff for failed browser operations
  */
 
-import pRetry, { AbortError } from 'p-retry';
-import { config } from './config-manager.js';
-import { logger } from '../utils/logger.js';
+import pRetry, { AbortError, FailedAttemptError } from 'p-retry';
+
+export interface RetryConfig {
+  enabled: boolean;
+  maxAttempts: number;
+  minTimeout: number;
+  maxTimeout: number;
+}
 
 export interface RetryOptions {
   retries?: number;
   minTimeout?: number;
   maxTimeout?: number;
-  onFailedAttempt?: (error: Error, attempt: number) => void;
+  onFailedAttempt?: (error: FailedAttemptError) => void;
 }
 
 /**
@@ -20,22 +25,10 @@ export interface RetryOptions {
  * Executes async operations with automatic retry on failure
  */
 export class RetryManager {
-  private enabled: boolean;
-  private defaultOptions: RetryOptions;
+  private config: RetryConfig;
 
-  constructor() {
-    const retryConfig = config.getRetryConfig();
-    this.enabled = retryConfig.enabled;
-    this.defaultOptions = {
-      retries: retryConfig.maxAttempts,
-      minTimeout: retryConfig.minTimeout,
-      maxTimeout: retryConfig.maxTimeout,
-    };
-
-    logger.info('RetryManager initialized', {
-      enabled: this.enabled,
-      defaultRetries: this.defaultOptions.retries,
-    });
+  constructor(config: RetryConfig) {
+    this.config = config;
   }
 
   /**
@@ -46,38 +39,32 @@ export class RetryManager {
     options?: RetryOptions
   ): Promise<T> {
     // If retries disabled, execute once
-    if (!this.enabled) {
+    if (!this.config.enabled) {
       return operation();
     }
 
-    const mergedOptions = { ...this.defaultOptions, ...options };
+    // Convert maxAttempts to retries (p-retry counts retries AFTER initial attempt)
+    // So maxAttempts: 3 means 1 initial + 2 retries
+    const maxRetries = (options?.retries ?? this.config.maxAttempts) - 1;
+
+    const mergedOptions = {
+      retries: Math.max(0, maxRetries), // Ensure non-negative
+      minTimeout: options?.minTimeout ?? this.config.minTimeout,
+      maxTimeout: options?.maxTimeout ?? this.config.maxTimeout,
+      onFailedAttempt: options?.onFailedAttempt,
+    };
 
     return pRetry(
-      async (attemptNumber) => {
+      async () => {
         try {
-          logger.debug('Retry attempt', { attempt: attemptNumber });
           return await operation();
         } catch (error) {
           // Check if error has retryable property (duck typing)
           const hasRetryable = error && typeof error === 'object' && 'retryable' in error;
           if (hasRetryable && !(error as any).retryable) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.warn('Non-retryable error, aborting', {
-              attempt: attemptNumber,
-              error: errorMessage,
-            });
             throw new AbortError(errorMessage);
           }
-
-          // Call custom handler if provided
-          if (mergedOptions.onFailedAttempt) {
-            mergedOptions.onFailedAttempt(error as Error, attemptNumber);
-          }
-
-          logger.warn('Retry failed attempt', {
-            attempt: attemptNumber,
-            error: error instanceof Error ? error.message : String(error),
-          });
 
           throw error;
         }
@@ -87,12 +74,13 @@ export class RetryManager {
         minTimeout: mergedOptions.minTimeout,
         maxTimeout: mergedOptions.maxTimeout,
         factor: 2, // Exponential backoff factor
-        onFailedAttempt: (error) => {
-          logger.debug('p-retry failed attempt', {
-            attemptNumber: error.attemptNumber,
-            retriesLeft: error.retriesLeft,
-          });
-        },
+        onFailedAttempt: mergedOptions.onFailedAttempt 
+          ? (error: FailedAttemptError) => {
+              // Call custom handler with the FailedAttemptError which includes
+              // attemptNumber, retriesLeft, etc.
+              mergedOptions.onFailedAttempt!(error);
+            }
+          : undefined,
       }
     );
   }
@@ -101,25 +89,20 @@ export class RetryManager {
    * Enable retry logic
    */
   public enable(): void {
-    this.enabled = true;
-    logger.info('Retry enabled');
+    this.config.enabled = true;
   }
 
   /**
    * Disable retry logic
    */
   public disable(): void {
-    this.enabled = false;
-    logger.info('Retry disabled');
+    this.config.enabled = false;
   }
 
   /**
    * Check if retry is enabled
    */
   public isEnabled(): boolean {
-    return this.enabled;
+    return this.config.enabled;
   }
 }
-
-// Export singleton instance
-export const retry = new RetryManager();

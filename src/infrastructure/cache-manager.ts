@@ -5,10 +5,19 @@
  */
 
 import { LRUCache } from 'lru-cache';
-import { config } from './config-manager.js';
-import { logger } from '../utils/logger.js';
 
 export type CacheCategory = 'jobs' | 'companies' | 'sessions' | 'other';
+
+export interface CacheConfig {
+  enabled: boolean;
+  ttl: {
+    jobs: number;
+    companies: number;
+    sessions: number;
+    other: number;
+  };
+  maxSize: number;
+}
 
 /**
  * Cache Manager
@@ -16,39 +25,49 @@ export type CacheCategory = 'jobs' | 'companies' | 'sessions' | 'other';
  */
 export class CacheManager {
   private cache: LRUCache<string, any>;
-  private enabled: boolean;
+  private config: CacheConfig;
 
-  constructor() {
-    const cacheConfig = config.getCacheConfig();
-    this.enabled = cacheConfig.enabled;
+  constructor(config: CacheConfig) {
+    this.config = config;
 
     this.cache = new LRUCache({
-      max: cacheConfig.maxSize,
-      ttl: 3600 * 1000, // Default 1 hour in milliseconds
-      updateAgeOnGet: true, // Reset TTL on access
+      max: config.maxSize,
+      ttl: config.ttl.other * 1000, // Default TTL in milliseconds
+      updateAgeOnGet: true, // Reset TTL on access for LRU behavior
       updateAgeOnHas: false,
     });
+  }
 
-    logger.info('CacheManager initialized', {
-      enabled: this.enabled,
-      maxSize: cacheConfig.maxSize,
-    });
+  /**
+   * Get TTL for a category
+   * @private
+   */
+  private getTTL(category: CacheCategory = 'other', customTTL?: number): number {
+    if (customTTL !== undefined) {
+      return customTTL;
+    }
+
+    switch (category) {
+      case 'jobs':
+        return this.config.ttl.jobs;
+      case 'companies':
+        return this.config.ttl.companies;
+      case 'sessions':
+        return this.config.ttl.sessions;
+      case 'other':
+      default:
+        return this.config.ttl.other;
+    }
   }
 
   /**
    * Get value from cache
    */
   public async get<T>(key: string): Promise<T | undefined> {
-    if (!this.enabled) return undefined;
+    if (!this.config.enabled) return undefined;
 
     const value = this.cache.get(key);
-    if (value !== undefined) {
-      logger.debug('Cache hit', { key });
-      return value as T;
-    }
-
-    logger.debug('Cache miss', { key });
-    return undefined;
+    return value as T | undefined;
   }
 
   /**
@@ -59,58 +78,52 @@ export class CacheManager {
     key: string,
     value: T,
     category: CacheCategory = 'other',
-    ttlSeconds?: number
+    customTTL?: number
   ): Promise<void> {
-    if (!this.enabled) return;
+    if (!this.config.enabled) return;
 
-    const cacheConfig = config.getCacheConfig();
-    const ttl = ttlSeconds
-      ? ttlSeconds * 1000
-      : category === 'jobs'
-      ? cacheConfig.ttl.jobs * 1000
-      : category === 'companies'
-      ? cacheConfig.ttl.companies * 1000
-      : category === 'sessions'
-      ? cacheConfig.ttl.sessions * 1000
-      : 3600 * 1000; // Default 1 hour
+    const ttlSeconds = this.getTTL(category, customTTL);
+    const ttlMs = ttlSeconds * 1000;
 
-    this.cache.set(key, value, { ttl });
-    logger.debug('Cache set', { key, category, ttlSeconds: ttl / 1000 });
+    this.cache.set(key, value, { ttl: ttlMs });
   }
 
   /**
-   * Check if key exists in cache
+   * Check if key exists in cache (synchronous)
    */
-  public async has(key: string): Promise<boolean> {
-    if (!this.enabled) return false;
+  public has(key: string): boolean {
+    if (!this.config.enabled) return false;
     return this.cache.has(key);
   }
 
   /**
    * Delete specific key from cache
    */
-  public async delete(key: string): Promise<boolean> {
-    if (!this.enabled) return false;
-
-    const existed = this.cache.has(key);
+  public async delete(key: string): Promise<void> {
+    if (!this.config.enabled) return;
     this.cache.delete(key);
-    logger.debug('Cache delete', { key, existed });
-    return existed;
   }
 
   /**
-   * Invalidate all keys matching pattern (prefix)
+   * Invalidate all keys matching pattern
+   * Supports wildcards: "jobs:*", "prefix:*:suffix", or exact match
    * Returns number of keys invalidated
    */
   public async invalidate(pattern: string): Promise<number> {
-    if (!this.enabled) return 0;
+    if (!this.config.enabled) return 0;
 
     let count = 0;
     const keysToDelete: string[] = [];
 
+    // Convert pattern to regex
+    const regexPattern = pattern
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape special chars except *
+      .replace(/\*/g, '.*'); // Convert * to .*
+    const regex = new RegExp(`^${regexPattern}$`);
+
     // Collect keys matching pattern
     for (const key of this.cache.keys()) {
-      if (key.startsWith(pattern)) {
+      if (regex.test(key)) {
         keysToDelete.push(key);
       }
     }
@@ -121,16 +134,14 @@ export class CacheManager {
       count++;
     }
 
-    logger.info('Cache invalidated', { pattern, count });
     return count;
   }
 
   /**
    * Clear entire cache
    */
-  public async clear(): Promise<void> {
+  public clear(): void {
     this.cache.clear();
-    logger.info('Cache cleared');
   }
 
   /**
@@ -140,7 +151,7 @@ export class CacheManager {
     return {
       size: this.cache.size,
       maxSize: this.cache.max,
-      enabled: this.enabled,
+      enabled: this.config.enabled,
     };
   }
 
@@ -148,18 +159,13 @@ export class CacheManager {
    * Enable caching
    */
   public enable(): void {
-    this.enabled = true;
-    logger.info('Cache enabled');
+    this.config.enabled = true;
   }
 
   /**
    * Disable caching
    */
   public disable(): void {
-    this.enabled = false;
-    logger.info('Cache disabled');
+    this.config.enabled = false;
   }
 }
-
-// Export singleton instance
-export const cache = new CacheManager();

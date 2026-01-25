@@ -1,177 +1,273 @@
 /**
  * Progress Manager
- * Wraps ora (spinners) and cli-progress (bars) for visual feedback
+ * Manages multiple concurrent spinners and progress bars
  * Provides user-friendly progress indicators for CLI operations
  */
 
 import ora, { Ora } from 'ora';
-import cliProgress from 'cli-progress';
-import { config } from './config-manager.js';
-import { logger } from '../utils/logger.js';
+
+export interface ProgressConfig {
+  spinners: boolean;
+  bars: boolean;
+}
+
+interface SpinnerState {
+  id: string;
+  instance?: Ora;
+  active: boolean;
+}
+
+interface BarState {
+  id: string;
+  total: number;
+  current: number;
+  active: boolean;
+}
 
 /**
- * Progress Manager
- * Manages spinners and progress bars for CLI feedback
+ * Progress Manager  
+ * Manages spinners and progress bars with ID-based tracking
+ * Supports both legacy single-spinner API and new multi-spinner API
  */
 export class ProgressManager {
-  private spinner?: Ora;
-  private progressBar?: cliProgress.SingleBar;
-  private spinnersEnabled: boolean;
-  private barsEnabled: boolean;
+  private config: ProgressConfig;
+  private spinners: Map<string, SpinnerState> = new Map();
+  private bars: Map<string, BarState> = new Map();
+  private spinnerCounter: number = 0;
+  private barCounter: number = 0;
+  private currentSpinnerId: string | null = null; // For legacy API
 
-  constructor() {
-    const progressConfig = config.getProgressConfig();
-    this.spinnersEnabled = progressConfig.spinners;
-    this.barsEnabled = progressConfig.bars;
-
-    logger.info('ProgressManager initialized', {
-      spinners: this.spinnersEnabled,
-      bars: this.barsEnabled,
-    });
+  constructor(config: ProgressConfig) {
+    this.config = config;
   }
 
   /**
    * Start a spinner with text
+   * @returns Spinner ID for future operations
    */
-  public startSpinner(text: string): void {
-    if (!this.spinnersEnabled) return;
-
-    this.spinner = ora({
-      text,
-      color: 'cyan',
-    }).start();
+  public startSpinner(text: string): string {
+    const id = `spinner-${this.spinnerCounter++}`;
+    
+    if (this.config.spinners) {
+      const instance = ora({
+        text,
+        color: 'cyan',
+      }).start();
+      
+      this.spinners.set(id, { id, instance, active: true });
+    } else {
+      // Spinners disabled - track ID but don't create instance
+      this.spinners.set(id, { id, instance: undefined, active: false });
+    }
+    
+    this.currentSpinnerId = id; // Track for legacy API
+    return id;
   }
 
   /**
    * Update spinner text
+   * Legacy API: updates current spinner if no ID provided
    */
-  public updateSpinner(text: string): void {
-    if (!this.spinnersEnabled || !this.spinner) return;
-    this.spinner.text = text;
+  public updateSpinner(idOrText: string, text?: string): void {
+    const id = text !== undefined ? idOrText : this.currentSpinnerId;
+    const updateText = text !== undefined ? text : idOrText;
+    
+    if (!id) return;
+    
+    const spinner = this.spinners.get(id);
+    if (!spinner || !spinner.instance) return;
+    
+    spinner.instance.text = updateText;
   }
 
   /**
    * Mark spinner as succeeded
+   * Legacy API: succeeds current spinner if no ID provided
    */
-  public succeedSpinner(text?: string): void {
-    if (!this.spinnersEnabled || !this.spinner) return;
-    this.spinner.succeed(text);
-    this.spinner = undefined;
+  public succeedSpinner(idOrText?: string, text?: string): void {
+    const id = text !== undefined ? idOrText : this.currentSpinnerId;
+    const successText = text !== undefined ? text : idOrText;
+    
+    if (!id) return;
+    
+    const spinner = this.spinners.get(id);
+    if (!spinner) return;
+    
+    if (spinner.instance) {
+      spinner.instance.succeed(successText);
+    }
+    
+    spinner.active = false;
+    this.spinners.delete(id);
+    
+    if (id === this.currentSpinnerId) {
+      this.currentSpinnerId = null;
+    }
   }
 
   /**
    * Mark spinner as failed
+   * Legacy API: fails current spinner if no ID provided
    */
-  public failSpinner(text?: string): void {
-    if (!this.spinnersEnabled || !this.spinner) return;
-    this.spinner.fail(text);
-    this.spinner = undefined;
+  public failSpinner(idOrText?: string, text?: string): void {
+    const id = text !== undefined ? idOrText : this.currentSpinnerId;
+    const failText = text !== undefined ? text : idOrText;
+    
+    if (!id) return;
+    
+    const spinner = this.spinners.get(id);
+    if (!spinner) return;
+    
+    if (spinner.instance) {
+      spinner.instance.fail(failText);
+    }
+    
+    spinner.active = false;
+    this.spinners.delete(id);
+    
+    if (id === this.currentSpinnerId) {
+      this.currentSpinnerId = null;
+    }
   }
 
   /**
-   * Stop spinner without success/fail
+   * Mark spinner with warning
    */
-  public stopSpinner(): void {
-    if (!this.spinnersEnabled || !this.spinner) return;
-    this.spinner.stop();
-    this.spinner = undefined;
+  public warnSpinner(id: string, text?: string): void {
+    const spinner = this.spinners.get(id);
+    if (!spinner) return;
+    
+    if (spinner.instance) {
+      spinner.instance.warn(text);
+    }
+    
+    spinner.active = false;
+    this.spinners.delete(id);
+  }
+
+  /**
+   * Mark spinner with info
+   */
+  public infoSpinner(id: string, text?: string): void {
+    const spinner = this.spinners.get(id);
+    if (!spinner) return;
+    
+    if (spinner.instance) {
+      spinner.instance.info(text);
+    }
+    
+    spinner.active = false;
+    this.spinners.delete(id);
+  }
+
+  /**
+   * Stop spinner without status
+   */
+  public stopSpinner(id?: string): void {
+    const spinnerId = id || this.currentSpinnerId;
+    if (!spinnerId) return;
+    
+    const spinner = this.spinners.get(spinnerId);
+    if (!spinner) return;
+    
+    if (spinner.instance) {
+      spinner.instance.stop();
+    }
+    
+    spinner.active = false;
+    this.spinners.delete(spinnerId);
+    
+    if (spinnerId === this.currentSpinnerId) {
+      this.currentSpinnerId = null;
+    }
+  }
+
+  /**
+   * Check if any spinner is currently active
+   */
+  public hasActiveSpinner(): boolean {
+    for (const spinner of this.spinners.values()) {
+      if (spinner.active) return true;
+    }
+    return false;
   }
 
   /**
    * Start a progress bar
+   * @param total - Total items to process
+   * @param label - Label for the progress bar
+   * @returns Bar ID for future operations
    */
-  public startProgress(total: number, label: string): void {
-    if (!this.barsEnabled) return;
-
-    this.progressBar = new cliProgress.SingleBar({
-      format: `${label} | {bar} | {percentage}% | {value}/{total}`,
-      barCompleteChar: '\u2588',
-      barIncompleteChar: '\u2591',
-      hideCursor: true,
-    });
-
-    this.progressBar.start(total, 0);
+  public startProgress(total: number, _label: string): string {
+    const id = `bar-${this.barCounter++}`;
+    
+    if (this.config.bars) {
+      // Note: cli-progress doesn't support multiple concurrent bars well
+      // For now, we'll track the state but use a simplified implementation
+      this.bars.set(id, { id, total, current: 0, active: true });
+    } else {
+      // Bars disabled - track ID but don't create instance
+      this.bars.set(id, { id, total, current: 0, active: false });
+    }
+    
+    return id;
   }
 
   /**
-   * Update progress bar current value
+   * Update progress bar to specific value
    */
-  public updateProgress(current: number): void {
-    if (!this.barsEnabled || !this.progressBar) return;
-    this.progressBar.update(current);
+  public updateProgress(id: string, current: number): void {
+    const bar = this.bars.get(id);
+    if (!bar) return;
+    
+    bar.current = Math.min(current, bar.total);
   }
 
   /**
-   * Increment progress bar by 1
+   * Increment progress bar by amount
    */
-  public incrementProgress(): void {
-    if (!this.barsEnabled || !this.progressBar) return;
-    this.progressBar.increment();
+  public incrementProgress(id: string, amount: number = 1): void {
+    const bar = this.bars.get(id);
+    if (!bar) return;
+    
+    bar.current = Math.min(bar.current + amount, bar.total);
   }
 
   /**
    * Stop progress bar
    */
-  public stopProgress(): void {
-    if (!this.barsEnabled || !this.progressBar) return;
-    this.progressBar.stop();
-    this.progressBar = undefined;
+  public stopProgress(id: string): void {
+    const bar = this.bars.get(id);
+    if (!bar) return;
+    
+    bar.active = false;
+    this.bars.delete(id);
   }
 
   /**
-   * Enable spinners
+   * Check if any progress bar is currently active
    */
-  public enableSpinners(): void {
-    this.spinnersEnabled = true;
-    logger.info('Spinners enabled');
-  }
-
-  /**
-   * Disable spinners
-   */
-  public disableSpinners(): void {
-    this.spinnersEnabled = false;
-    if (this.spinner) {
-      this.spinner.stop();
-      this.spinner = undefined;
+  public hasActiveBar(): boolean {
+    for (const bar of this.bars.values()) {
+      if (bar.active) return true;
     }
-    logger.info('Spinners disabled');
+    return false;
   }
 
   /**
-   * Enable progress bars
+   * Stop all spinners and progress bars
    */
-  public enableBars(): void {
-    this.barsEnabled = true;
-    logger.info('Progress bars enabled');
-  }
-
-  /**
-   * Disable progress bars
-   */
-  public disableBars(): void {
-    this.barsEnabled = false;
-    if (this.progressBar) {
-      this.progressBar.stop();
-      this.progressBar = undefined;
+  public stopAll(): void {
+    // Stop all spinners
+    for (const spinner of this.spinners.values()) {
+      if (spinner.instance) {
+        spinner.instance.stop();
+      }
     }
-    logger.info('Progress bars disabled');
-  }
-
-  /**
-   * Check if spinners are enabled
-   */
-  public areSpinnersEnabled(): boolean {
-    return this.spinnersEnabled;
-  }
-
-  /**
-   * Check if bars are enabled
-   */
-  public areBarsEnabled(): boolean {
-    return this.barsEnabled;
+    this.spinners.clear();
+    this.currentSpinnerId = null;
+    
+    // Stop all bars
+    this.bars.clear();
   }
 }
-
-// Export singleton instance
-export const progress = new ProgressManager();

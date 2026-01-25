@@ -160,8 +160,10 @@ export class BrowserSessionManager {
     // Use retry logic for navigation
     await retry.execute(
       async () => {
+
+        let spinnerId: string | undefined;
         try {
-          progress.startSpinner(`Navigating to ${url}...`);
+          spinnerId = progress.startSpinner(`Navigating to ${url}...`);
           logger.debug('Navigating to URL', { platform, url });
 
           // Navigate to URL
@@ -172,17 +174,19 @@ export class BrowserSessionManager {
 
           // Wait for specific selector if provided
           if (waitForSelector) {
-            progress.updateSpinner(`Waiting for page elements...`);
+            progress.updateSpinner(spinnerId, `Waiting for page elements...`);
             logger.debug('Waiting for selector', { platform, selector: waitForSelector });
             await session.page.waitForSelector(waitForSelector, { timeout });
           }
 
           session.lastActivityAt = new Date();
-          progress.succeedSpinner(`Loaded ${url}`);
+          progress.succeedSpinner(spinnerId, `Loaded ${url}`);
           logger.info('Navigation complete', { platform, url });
 
         } catch (error) {
-          progress.failSpinner(`Failed to load ${url}`);
+          if (spinnerId) {
+            progress.failSpinner(spinnerId, `Failed to load ${url}`);
+          }
           logger.error('Navigation failed', { platform, url, error });
           session.state = 'ERROR';
           throw new Error(`Navigation failed for ${platform}: ${error}`);
@@ -192,8 +196,14 @@ export class BrowserSessionManager {
         retries: 3,
         minTimeout: 1000,
         maxTimeout: 5000,
-        onFailedAttempt: (error, attempt) => {
-          logger.warn('Navigation retry', { platform, url, attempt, error: error.message });
+        onFailedAttempt: (error) => {
+          logger.warn('Navigation retry', { 
+            platform, 
+            url, 
+            attempt: error.attemptNumber, 
+            retriesLeft: error.retriesLeft,
+            error: error.message 
+          });
         },
       }
     );
