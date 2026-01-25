@@ -25,6 +25,9 @@ import { FileEngine } from './tools/file/FileEngine.js';
 import { fileTools } from './tools/file/tools.js';
 import { CronEngine } from './tools/cron/CronEngine.js';
 import { cronTools } from './tools/cron/tools.js';
+import { apiTools } from './tools/api/tools.js';
+import { databaseTools } from './tools/database/tools.js';
+import { emailTools } from './tools/email/tools.js';
 
 const logger = createLogger('server');
 
@@ -44,7 +47,7 @@ export class OktyvServer {
     this.server = new Server(
       {
         name: 'oktyv',
-        version: '1.0.0-alpha.2',
+        version: '1.0.0-alpha.3',
       },
       {
         capabilities: {
@@ -519,6 +522,15 @@ export class OktyvServer {
 
           // Cron Engine Tools
           ...cronTools,
+
+          // API Engine Tools
+          ...apiTools,
+
+          // Database Engine Tools
+          ...databaseTools,
+
+          // Email Engine Tools
+          ...emailTools,
         ],
       };
     });
@@ -686,6 +698,81 @@ export class OktyvServer {
 
           case 'cron_validate_expression':
             return await this.handleCronValidateExpression(args);
+
+          // API Engine Tools
+          case 'api_request':
+            return await this.handleApiRequest(args);
+
+          case 'api_oauth_init':
+            return await this.handleApiOAuthInit(args);
+
+          case 'api_oauth_callback':
+            return await this.handleApiOAuthCallback(args);
+
+          case 'api_oauth_refresh':
+            return await this.handleApiOAuthRefresh(args);
+
+          case 'api_set_rate_limit':
+            return await this.handleApiSetRateLimit(args);
+
+          case 'api_get_rate_limit_status':
+            return await this.handleApiGetRateLimitStatus(args);
+
+          // Database Engine Tools
+          case 'db_connect':
+            return await this.handleDbConnect(args);
+
+          case 'db_query':
+            return await this.handleDbQuery(args);
+
+          case 'db_insert':
+            return await this.handleDbInsert(args);
+
+          case 'db_update':
+            return await this.handleDbUpdate(args);
+
+          case 'db_delete':
+            return await this.handleDbDelete(args);
+
+          case 'db_transaction':
+            return await this.handleDbTransaction(args);
+
+          case 'db_raw_query':
+            return await this.handleDbRawQuery(args);
+
+          case 'db_aggregate':
+            return await this.handleDbAggregate(args);
+
+          case 'db_disconnect':
+            return await this.handleDbDisconnect(args);
+
+          // Email Engine Tools
+          case 'email_gmail_connect':
+            return await this.handleEmailGmailConnect(args);
+
+          case 'email_gmail_send':
+            return await this.handleEmailGmailSend(args);
+
+          case 'email_gmail_read':
+            return await this.handleEmailGmailRead(args);
+
+          case 'email_gmail_search':
+            return await this.handleEmailGmailSearch(args);
+
+          case 'email_smtp_connect':
+            return await this.handleEmailSmtpConnect(args);
+
+          case 'email_smtp_send':
+            return await this.handleEmailSmtpSend(args);
+
+          case 'email_imap_connect':
+            return await this.handleEmailImapConnect(args);
+
+          case 'email_imap_fetch':
+            return await this.handleEmailImapFetch(args);
+
+          case 'email_parse':
+            return await this.handleEmailParse(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -2370,6 +2457,147 @@ export class OktyvServer {
         ],
       };
     }
+  }
+
+  // ============================================================================
+  // API Engine Handlers (PLACEHOLDER - TODO: Full Implementation)
+  // ============================================================================
+
+  private async handleApiRequest(_args: any): Promise<any> {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          success: false,
+          error: {
+            code: 'NOT_IMPLEMENTED',
+            message: 'API Engine handlers not yet implemented. Core engine complete, integration pending.',
+          },
+        }, null, 2),
+      }],
+    };
+  }
+
+  private async handleApiOAuthInit(args: any): Promise<any> {
+    return this.handleApiRequest(args);
+  }
+
+  private async handleApiOAuthCallback(args: any): Promise<any> {
+    return this.handleApiRequest(args);
+  }
+
+  private async handleApiOAuthRefresh(args: any): Promise<any> {
+    return this.handleApiRequest(args);
+  }
+
+  private async handleApiSetRateLimit(args: any): Promise<any> {
+    return this.handleApiRequest(args);
+  }
+
+  private async handleApiGetRateLimitStatus(args: any): Promise<any> {
+    return this.handleApiRequest(args);
+  }
+
+  // ============================================================================
+  // Database Engine Handlers (PLACEHOLDER - TODO: Full Implementation)
+  // ============================================================================
+
+  private async handleDbConnect(_args: any): Promise<any> {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          success: false,
+          error: {
+            code: 'NOT_IMPLEMENTED',
+            message: 'Database Engine handlers not yet implemented. Core engine complete, integration pending.',
+          },
+        }, null, 2),
+      }],
+    };
+  }
+
+  private async handleDbQuery(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbInsert(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbUpdate(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbDelete(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbTransaction(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbRawQuery(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbAggregate(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  private async handleDbDisconnect(args: any): Promise<any> {
+    return this.handleDbConnect(args);
+  }
+
+  // ============================================================================
+  // Email Engine Handlers (PLACEHOLDER - TODO: Full Implementation)
+  // ============================================================================
+
+  private async handleEmailGmailConnect(_args: any): Promise<any> {
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          success: false,
+          error: {
+            code: 'NOT_IMPLEMENTED',
+            message: 'Email Engine handlers not yet implemented. Core engine complete, integration pending.',
+          },
+        }, null, 2),
+      }],
+    };
+  }
+
+  private async handleEmailGmailSend(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailGmailRead(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailGmailSearch(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailSmtpConnect(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailSmtpSend(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailImapConnect(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailImapFetch(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
+  }
+
+  private async handleEmailParse(args: any): Promise<any> {
+    return this.handleEmailGmailConnect(args);
   }
 
   // ============================================================================

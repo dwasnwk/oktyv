@@ -182,3 +182,13 @@ export const apiGetRateLimitStatusTool = {
   description: 'Get current rate limit status showing available tokens',
   inputSchema: apiGetRateLimitStatusSchema,
 };
+
+// Aggregate all API tools for easy import
+export const apiTools = [
+  apiRequestTool,
+  apiOAuthInitTool,
+  apiOAuthCallbackTool,
+  apiOAuthRefreshTool,
+  apiSetRateLimitTool,
+  apiGetRateLimitStatusTool,
+];
