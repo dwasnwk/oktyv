@@ -1,6 +1,6 @@
 {
   "name": "oktyv",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "description": "Universal browser automation platform with MCP server and CLI",
   "main": "dist/index.js",
   "bin": {
@@ -13,11 +13,11 @@
     "start": "node dist/index.js",
     "test": "tsx --test tests/**/*.test.ts",
     "test:watch": "tsx --test --watch tests/**/*.test.ts",
-    "test:coverage": "c8 --reporter=html --reporter=text tsx --test tests/**/*.test.ts",
-    "test:coverage:text": "c8 --reporter=text tsx --test tests/**/*.test.ts",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "test:coverage": "npx c8 --reporter=html --reporter=text tsx --test tests/**/*.test.ts",
+    "test:coverage:text": "npx c8 --reporter=text tsx --test tests/**/*.test.ts",
+    "lint": "npx eslint src --ext .ts",
+    "lint:fix": "npx eslint src --ext .ts --fix",
+    "format": "npx prettier --write \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
@@ -52,12 +52,13 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.7",
-    "@typescript-eslint/eslint-plugin": "^8.19.1",
-    "@typescript-eslint/parser": "^8.19.1",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
     "c8": "^10.1.3",
-    "eslint": "^9.18.0",
+    "eslint": "^9.39.2",
     "prettier": "^3.4.2",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.3"
   }
 }
