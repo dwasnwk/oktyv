@@ -53,7 +53,7 @@ export class OktyvServer {
     this.server = new Server(
       {
         name: 'oktyv',
-        version: '1.0.0-beta.1',
+        version: '1.0.0',
       },
       {
         capabilities: {

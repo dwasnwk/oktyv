@@ -1,7 +1,7 @@
 {
   "name": "oktyv",
-  "version": "1.0.0-beta.1",
-  "description": "Universal automation layer - ALL 7 engines fully integrated and operational",
+  "version": "1.0.0",
+  "description": "Universal automation layer - Production ready with complete hardening suite",
   "main": "dist/index.js",
   "bin": {
     "oktyv": "dist/cli/index.js"
@@ -15,6 +15,11 @@
     "test:watch": "tsx --test --watch tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts tests/unit/file/*.test.ts tests/unit/cron/*.test.ts",
     "test:coverage": "npx c8 --reporter=html --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts tests/unit/file/*.test.ts tests/unit/cron/*.test.ts",
     "test:coverage:text": "npx c8 --reporter=text tsx --test tests/unit/connectors/*.test.ts tests/unit/tools/*.test.ts tests/unit/vault/*.test.ts tests/unit/api/*.test.ts tests/unit/database/*.test.ts tests/unit/email/*.test.ts tests/unit/file/*.test.ts tests/unit/cron/*.test.ts",
+    "test:production": "tsx test/production-hardening.ts",
+    "test:load": "tsx test/load/LoadTestRunner.ts",
+    "test:security": "tsx test/security/SecurityAuditRunner.ts",
+    "test:performance": "tsx test/performance/PerformanceBenchmark.ts",
+    "test:recovery": "tsx test/recovery/ErrorRecoveryTester.ts",
     "lint": "npx eslint src --ext .ts",
     "lint:fix": "npx eslint src --ext .ts --fix",
     "format": "npx prettier --write \"src/**/*.ts\"",
