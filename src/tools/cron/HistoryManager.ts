@@ -50,10 +50,10 @@ export class HistoryManager {
       CREATE TABLE IF NOT EXISTS executions (
         id TEXT PRIMARY KEY,
         task_id TEXT NOT NULL,
-        started_at TEXT NOT NULL,
-        completed_at TEXT,
+        start_time TEXT NOT NULL,
+        end_time TEXT,
         duration INTEGER,
-        status TEXT NOT NULL CHECK(status IN ('running', 'success', 'failed', 'timeout')),
+        status TEXT NOT NULL CHECK(status IN ('success', 'failure', 'timeout')),
         result TEXT,
         error TEXT,
         retry_count INTEGER DEFAULT 0,
@@ -61,7 +61,7 @@ export class HistoryManager {
       );
       
       CREATE INDEX IF NOT EXISTS idx_executions_task_id ON executions(task_id);
-      CREATE INDEX IF NOT EXISTS idx_executions_started_at ON executions(started_at);
+      CREATE INDEX IF NOT EXISTS idx_executions_start_time ON executions(start_time);
       CREATE INDEX IF NOT EXISTS idx_executions_status ON executions(status);
     `);
   }
@@ -77,7 +77,7 @@ export class HistoryManager {
     
     const stmt = this.db.prepare(`
       INSERT INTO executions (
-        id, task_id, started_at, status, retry_count
+        id, task_id, start_time, status, retry_count
       ) VALUES (?, ?, ?, 'running', 0)
     `);
     
@@ -104,7 +104,7 @@ export class HistoryManager {
     
     const stmt = this.db.prepare(`
       UPDATE executions SET
-        completed_at = ?,
+        end_time = ?,
         duration = ?,
         status = 'success',
         result = ?
@@ -137,7 +137,7 @@ export class HistoryManager {
     
     const stmt = this.db.prepare(`
       UPDATE executions SET
-        completed_at = ?,
+        end_time = ?,
         duration = ?,
         status = 'failed',
         error = ?
@@ -164,7 +164,7 @@ export class HistoryManager {
     
     const stmt = this.db.prepare(`
       UPDATE executions SET
-        completed_at = ?,
+        end_time = ?,
         duration = ?,
         status = 'timeout'
       WHERE id = ?
@@ -196,7 +196,7 @@ export class HistoryManager {
     const stmt = this.db.prepare(`
       SELECT * FROM executions
       WHERE task_id = ?
-      ORDER BY started_at DESC
+      ORDER BY start_time DESC
       LIMIT ?
     `);
     
@@ -218,9 +218,9 @@ export class HistoryManager {
         SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failure_count,
         SUM(CASE WHEN status = 'timeout' THEN 1 ELSE 0 END) as timeout_count,
         AVG(CASE WHEN duration IS NOT NULL THEN duration ELSE NULL END) as avg_duration,
-        MAX(CASE WHEN status != 'running' THEN started_at ELSE NULL END) as last_run,
-        MAX(CASE WHEN status = 'success' THEN started_at ELSE NULL END) as last_success,
-        MAX(CASE WHEN status = 'failed' THEN started_at ELSE NULL END) as last_failure
+        MAX(CASE WHEN status != 'running' THEN start_time ELSE NULL END) as last_run,
+        MAX(CASE WHEN status = 'success' THEN start_time ELSE NULL END) as last_success,
+        MAX(CASE WHEN status = 'failed' THEN start_time ELSE NULL END) as last_failure
       FROM executions
       WHERE task_id = ?
     `);
@@ -259,7 +259,7 @@ export class HistoryManager {
     
     const stmt = this.db.prepare(`
       DELETE FROM executions
-      WHERE started_at < ?
+      WHERE start_time < ?
       AND status != 'running'
     `);
     
@@ -277,8 +277,8 @@ export class HistoryManager {
     return {
       id: row.id,
       taskId: row.task_id,
-      startedAt: new Date(row.started_at),
-      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+      startedAt: new Date(row.start_time),
+      completedAt: row.end_time ? new Date(row.end_time) : undefined,
       duration: row.duration || undefined,
       status: row.status,
       result: row.result ? JSON.parse(row.result) : undefined,

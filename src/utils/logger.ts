@@ -36,32 +36,43 @@ const fileFormat = winston.format.combine(
   winston.format.json()
 );
 
+// Determine if running as MCP server (stdio must be pure JSON)
+const isMcpServer = process.argv[1]?.includes('index.js') || process.env.MCP_MODE === 'true';
+
+// Create transports array
+const transports: winston.transport[] = [
+  // File transport - combined
+  new winston.transports.File({
+    filename: path.join(LOG_DIR, 'oktyv.log'),
+    format: fileFormat,
+    maxsize: 10 * 1024 * 1024, // 10MB
+    maxFiles: 5,
+  }),
+  
+  // File transport - errors only
+  new winston.transports.File({
+    filename: path.join(LOG_DIR, 'error.log'),
+    level: 'error',
+    format: fileFormat,
+    maxsize: 10 * 1024 * 1024,
+    maxFiles: 5,
+  }),
+];
+
+// Only add console logging if NOT running as MCP server
+// (MCP requires stdout to be pure JSON)
+if (!isMcpServer) {
+  transports.push(
+    new winston.transports.Console({
+      format: consoleFormat,
+    })
+  );
+}
+
 // Create the root logger
 const rootLogger = winston.createLogger({
   level: LOG_LEVEL,
-  transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: consoleFormat,
-    }),
-    
-    // File transport - combined
-    new winston.transports.File({
-      filename: path.join(LOG_DIR, 'oktyv.log'),
-      format: fileFormat,
-      maxsize: 10 * 1024 * 1024, // 10MB
-      maxFiles: 5,
-    }),
-    
-    // File transport - errors only
-    new winston.transports.File({
-      filename: path.join(LOG_DIR, 'error.log'),
-      level: 'error',
-      format: fileFormat,
-      maxsize: 10 * 1024 * 1024,
-      maxFiles: 5,
-    }),
-  ],
+  transports,
 });
 
 /**

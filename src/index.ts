@@ -57,6 +57,6 @@ async function main() {
 
 // Run server
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  logger.error('Fatal error', { error });
   process.exit(1);
 });
