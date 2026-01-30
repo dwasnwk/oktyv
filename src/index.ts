@@ -22,16 +22,23 @@ const logger = createLogger('main');
 
 async function main() {
   try {
+    console.error('[DEBUG] Step 1: Starting Oktyv MCP Server...');
     logger.info('Starting Oktyv MCP Server...');
     
+    console.error('[DEBUG] Step 2: Creating server instance...');
     // Create server instance
     const server = new OktyvServer();
+    console.error('[DEBUG] Step 3: Server instance created');
     
+    console.error('[DEBUG] Step 4: Creating stdio transport...');
     // Create stdio transport
     const transport = new StdioServerTransport();
+    console.error('[DEBUG] Step 5: Transport created');
     
+    console.error('[DEBUG] Step 6: Connecting server to transport...');
     // Connect server to transport
     await server.connect(transport);
+    console.error('[DEBUG] Step 7: Server connected successfully');
     
     logger.info('Oktyv MCP Server started successfully');
     logger.info('Waiting for requests from Claude Desktop...');
@@ -50,6 +57,7 @@ async function main() {
     });
     
   } catch (error) {
+    console.error('[DEBUG] FATAL ERROR in main():', error);
     logger.error('Failed to start Oktyv MCP Server', { error });
     process.exit(1);
   }
@@ -57,6 +65,7 @@ async function main() {
 
 // Run server
 main().catch((error) => {
+  console.error('[DEBUG] FATAL ERROR in main() catch:', error);
   logger.error('Fatal error', { error });
   process.exit(1);
 });

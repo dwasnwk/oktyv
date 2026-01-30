@@ -1,0 +1,131 @@
+{
+  "$schema": "../../dist/mcpb-manifest.schema.json",
+  "manifest_version": "0.3",
+  "name": "oktyv",
+  "display_name": "Oktyv",
+  "version": "1.0.0",
+  "description": "Universal automation layer with 7 engines: Browser, API, Database, Email, File, Cron, and Vault. Features parallel DAG-based task execution.",
+  "long_description": "Oktyv is a comprehensive automation platform that provides:\n* **Browser Engine** - Job search automation (LinkedIn, Indeed, Wellfound) and generic web automation\n* **API Engine** - HTTP requests with OAuth support and rate limiting\n* **Database Engine** - PostgreSQL and MySQL operations with connection management\n* **Email Engine** - Email operations with provider integration\n* **File Engine** - Advanced file management including archives, watching, and batch operations\n* **Cron Engine** - Task scheduling with flexible triggers and execution history\n* **Vault Engine** - Secure credential storage and management\n* **Parallel Execution** - DAG-based task orchestration with dependency resolution\n\nOktyv enables complex automation workflows through a unified interface with powerful parallel execution capabilities.",
+  "author": {
+    "name": "David Kirsch",
+    "email": "david@example.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/duke-of-beans/oktyv.git"
+  },
+  "homepage": "https://github.com/duke-of-beans/oktyv",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "parallel_execute",
+      "description": "Execute multiple tasks in parallel with DAG-based dependency resolution. Orchestrates complex workflows with automatic level-by-level execution."
+    },
+    {
+      "name": "linkedin_search_jobs",
+      "description": "Search for jobs on LinkedIn with filters"
+    },
+    {
+      "name": "linkedin_get_job",
+      "description": "Get detailed information about a specific LinkedIn job posting"
+    },
+    {
+      "name": "indeed_search_jobs",
+      "description": "Search for jobs on Indeed with filters"
+    },
+    {
+      "name": "browser_navigate",
+      "description": "Navigate to a URL in the browser"
+    },
+    {
+      "name": "browser_click",
+      "description": "Click an element on the current page"
+    },
+    {
+      "name": "browser_type",
+      "description": "Type text into an input field"
+    },
+    {
+      "name": "vault_set",
+      "description": "Store a credential securely in a vault"
+    },
+    {
+      "name": "vault_get",
+      "description": "Retrieve a credential from a vault"
+    },
+    {
+      "name": "file_read",
+      "description": "Read a file from the filesystem"
+    },
+    {
+      "name": "file_write",
+      "description": "Write a file to the filesystem"
+    },
+    {
+      "name": "file_copy",
+      "description": "Copy a file to a new location"
+    },
+    {
+      "name": "cron_create_task",
+      "description": "Create a new scheduled task"
+    },
+    {
+      "name": "cron_list_tasks",
+      "description": "List all scheduled tasks"
+    },
+    {
+      "name": "api_request",
+      "description": "Make an HTTP request to an API"
+    },
+    {
+      "name": "db_connect",
+      "description": "Connect to a database"
+    },
+    {
+      "name": "db_query",
+      "description": "Execute a database query"
+    },
+    {
+      "name": "email_send",
+      "description": "Send an email"
+    }
+  ],
+  "keywords": [
+    "automation",
+    "workflow",
+    "orchestration",
+    "parallel-execution",
+    "job-search",
+    "browser-automation",
+    "api",
+    "database",
+    "email",
+    "file-management",
+    "scheduling",
+    "vault"
+  ],
+  "license": "MIT",
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

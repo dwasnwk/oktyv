@@ -23,8 +23,9 @@ import { OktyvErrorCode } from './types/mcp.js';
 import { VaultEngine } from './tools/vault/VaultEngine.js';
 import { FileEngine } from './tools/file/FileEngine.js';
 import { fileTools } from './tools/file/tools.js';
-import { CronEngine } from './tools/cron/CronEngine.js';
-import { cronTools } from './tools/cron/tools.js';
+// TEMPORARILY DISABLED: CronEngine requires better-sqlite3 (native module compatibility issue)
+// import { CronEngine } from './tools/cron/CronEngine.js';
+// import { cronTools } from './tools/cron/tools.js';
 import { apiTools } from './tools/api/tools.js';
 import { databaseTools } from './tools/database/tools.js';
 import { emailTools } from './tools/email/tools.js';
@@ -45,7 +46,7 @@ export class OktyvServer {
   private genericConnector: GenericBrowserConnector;
   private vaultEngine: VaultEngine;
   private fileEngine: FileEngine;
-  private cronEngine: CronEngine;
+  private cronEngine?: any; // Optional: disabled due to native module compatibility (CronEngine type unavailable)
   private apiEngine: ApiEngine;
   private databaseEngine: DatabaseEngine;
   private emailEngine: EmailEngine;
@@ -79,7 +80,9 @@ export class OktyvServer {
     this.fileEngine = new FileEngine();
 
     // Initialize cron infrastructure
-    this.cronEngine = new CronEngine();
+    // TEMPORARILY DISABLED: CronEngine requires better-sqlite3 which has Node version issues
+    // TODO: Re-enable after resolving native module compatibility with Claude Desktop
+    // this.cronEngine = new CronEngine();
 
     // Initialize API infrastructure
     this.apiEngine = new ApiEngine(
@@ -564,7 +567,8 @@ export class OktyvServer {
           ...fileTools,
 
           // Cron Engine Tools
-          ...cronTools,
+          // TEMPORARILY DISABLED: CronEngine requires better-sqlite3 (native module compatibility)
+          // ...cronTools,
 
           // API Engine Tools
           ...apiTools,
